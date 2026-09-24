@@ -1,0 +1,5 @@
+[env]
+# Stable baseline for all Apple Silicon Macs, rather than the build machine's CPU.
+CMAKE_PROJECT_INCLUDE = { value = "cmake/portable-whisper.cmake", relative = true }
+CMAKE_OSX_DEPLOYMENT_TARGET = "15.0"
+MACOSX_DEPLOYMENT_TARGET = "15.0"

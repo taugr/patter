@@ -38,9 +38,16 @@ fn main() {
         .split('\t')
         .find_map(|f| f.strip_prefix("version:"))
         .expect("Missing signed version");
-    assert_eq!(signed_version, manifest["version"].as_str().unwrap());
-    assert_ne!(
-        signed_version, "999.0.0",
+    let matches_version = |announced: &str| -> Result<(), &str> {
+        if announced == signed_version {
+            Ok(())
+        } else {
+            Err("Signed release version mismatch")
+        }
+    };
+    matches_version(manifest["version"].as_str().unwrap()).expect("Release version must match");
+    assert!(
+        matches_version("999.0.0").is_err(),
         "A falsely announced version must be rejected"
     );
     let mut corrupt = bytes.clone();

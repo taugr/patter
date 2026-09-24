@@ -10,7 +10,7 @@ Download the [latest Mac installer](https://github.com/taugr/patter/releases/lat
 
 ## Run
 
-Requires Node, pnpm, Rust, and Xcode Command Line Tools (Swift/C++).
+Requires Node 24.14, pnpm (pinned in package.json), Rust 1.96, and Xcode Command Line Tools (Swift/C++). The checked-in Cargo/CMake configuration targets a portable M1 CPU baseline while keeping Metal acceleration enabled.
 
 ```sh
 pnpm install
