@@ -23,7 +23,7 @@ export function Settings({
   updates,
   installing,
 }: {
-  updates: ReactNode;
+  updates: (settingsPending: boolean) => ReactNode;
   installing: boolean;
   preferences: Preferences;
   onSave: (p: Preferences) => void;
@@ -52,7 +52,7 @@ export function Settings({
   }
   return (
     <Dialog title="Settings" onClose={onClose}>
-      {updates}
+      {updates(busy || JSON.stringify(draft) !== JSON.stringify(preferences))}
       <fieldset className="settings-fields" disabled={installing}>
         <section className="settings-section">
           <h3>Calendar</h3>

@@ -59,7 +59,9 @@ export function Updates({
         </button>
       </div>
       {blocked && info.update && (
-        <small>Finish recording or processing before installing.</small>
+        <small>
+          Save settings and finish recording or processing before installing.
+        </small>
       )}
       {!native && <small>Available in the Mac app.</small>}
       <p className="update-status" role="status">

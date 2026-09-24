@@ -35,6 +35,11 @@ jobs:
         with:
           toolchain: 1.96.0
           components: rustfmt
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
+        with:
+          workspaces: src-tauri -> target
+          key: macos15-m1-baseline-v1
+          save-if: ${{ github.event_name != 'pull_request' }}
       - run: pnpm install --frozen-lockfile
       - run: pnpm version:check
       - run: pnpm test

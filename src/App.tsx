@@ -622,17 +622,17 @@ export default function App() {
         <Settings
           preferences={preferences}
           installing={installingUpdate}
-          updates={
+          updates={(settingsPending) => (
             <Updates
               info={updateInfo}
               status={updateStatus}
               checking={checkingUpdate}
               installing={installingUpdate}
-              blocked={!!recording || !!busy}
+              blocked={!!recording || !!busy || settingsPending}
               onCheck={() => void checkUpdates()}
               onInstall={() => void installUpdate()}
             />
-          }
+          )}
           onSave={setPrefs}
           onClose={() => {
             if (!installingRef.current) setModal(null);
