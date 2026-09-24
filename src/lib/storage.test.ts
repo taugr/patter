@@ -1,7 +1,55 @@
 import "fake-indexeddb/auto";
 import { describe, expect, it } from "vitest";
-import { saveMeeting, history, importAudio, listMeetings } from "./storage";
-import { matchesSearch, newMeeting } from "./types";
+import {
+  saveMeeting,
+  history,
+  importAudio,
+  listMeetings,
+  getPreferences,
+  setPreferences,
+} from "./storage";
+import { matchesSearch, newMeeting, type Preferences } from "./types";
+import { effectiveTemplate, templateInstructions } from "./templates";
+
+describe("summary templates", () => {
+  it("upgrades legacy preferences and persists edited templates and conversation overrides", async () => {
+    await setPreferences({
+      endpoint: "http://127.0.0.1:1234/v1",
+      model: "test",
+      whisperModel: "",
+      calendarEnabled: false,
+    } as Preferences);
+    const old = await getPreferences();
+    expect(effectiveTemplate(newMeeting(), old).id).toBe("general");
+    await setPreferences({
+      ...old,
+      summaryTemplate: "interview",
+      templateInstructions: { brainstorm: "Keep open alternatives." },
+    });
+    const prefs = await getPreferences();
+    expect(effectiveTemplate(newMeeting(), prefs).id).toBe("interview");
+    const conversation = await saveMeeting({
+      ...newMeeting(),
+      summaryTemplate: "brainstorm",
+      summaryInstructions: "Focus on access.",
+    });
+    const saved = (await listMeetings()).find((m) => m.id === conversation.id)!;
+    expect(effectiveTemplate(saved, prefs).id).toBe("brainstorm");
+    expect(templateInstructions("brainstorm", prefs)).toBe(
+      "Keep open alternatives.",
+    );
+    expect(saved.summaryInstructions).toBe("Focus on access.");
+    await saveMeeting({
+      ...saved,
+      summaryTemplate: "",
+      summaryInstructions: "",
+    });
+    const versions = await history(saved.id);
+    expect(effectiveTemplate(versions[0], prefs).id).toBe("interview");
+    expect(versions[1].summaryTemplate).toBe("brainstorm");
+    expect(versions[1].summaryInstructions).toBe("Focus on access.");
+  });
+});
 
 describe("permanent conversation history", () => {
   it("keeps every edit and archive without removing originals", async () => {

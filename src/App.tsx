@@ -421,6 +421,7 @@ export default function App() {
       {selected ? (
         <MeetingPane
           meeting={selected}
+          preferences={preferences}
           onUpdate={update}
           saving={saving}
           activeRecording={recording === selected.id}
@@ -460,7 +461,7 @@ export default function App() {
         />
       ) : (
         <main className="welcome">
-          <img src="/patter-mark.png" alt="" />
+          <img src="/patter-mark.svg" alt="" />
           <h1>A place for your conversations.</h1>
           <p>
             {ready
@@ -675,6 +676,9 @@ export default function App() {
                       v.summary.slice(0, 70) ||
                       "A fresh conversation"}
                   </small>
+                  {v.summarySource && (
+                    <small>Summary: {v.summarySource.templateName}</small>
+                  )}
                 </span>
                 <span>Restore</span>
               </button>

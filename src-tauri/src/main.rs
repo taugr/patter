@@ -2,6 +2,7 @@
 mod activity;
 mod models;
 mod store;
+mod templates;
 mod updates;
 use serde_json::{json, Value};
 use std::{
@@ -96,6 +97,7 @@ async fn summarize(
     let mut db = lock_db(&lib)?;
     let mut latest = store::load(&db, &id)?;
     latest["summary"] = generated["summary"].clone();
+    latest["summarySource"] = generated["summarySource"].clone();
     latest["decisions"] = generated["decisions"].clone();
     latest["actions"] = json!(generated["actions"]
         .as_array()

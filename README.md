@@ -25,8 +25,9 @@ Application: `src-tauri/target/release/bundle/macos/Patter.app`. The local packa
 
 ## Included
 
-- Cream, ink and teal split-view notebook based on the selected third concept; Fraunces headings, Nunito Sans body text, generated Patter mark and Phosphor icons.
+- Cream, ink and teal split-view notebook based on the selected third concept; Fraunces headings, Nunito Sans body text, vector Patter mark and Phosphor icons.
 - Editable conversation titles/notes, summaries, decisions, action checkboxes, transcripts, search, Today filter and archive/restore.
+- General meeting, One-to-one, Interview, Brainstorm and Custom summary templates, with editable instructions, a default preference and per-conversation choices.
 - Immutable SQLite versions; restoring creates a new version. Existing audio attachments cannot be detached or repointed by ordinary saves. No delete/retention-cleanup commands.
 - Audio import with a durable copy, playback, timestamp seeking, speed control, and consecutive chunk playback within the selected track.
 - Swift ScreenCaptureKit bridge for microphone and computer audio; approximately five-second CAF chunks, unique capture-session filenames, startup recovery of surviving chunks, and WAV playback derivatives. No screen video is stored.
@@ -39,6 +40,8 @@ Application: `src-tauri/target/release/bundle/macos/Patter.app`. The local packa
 **Calendar:** Add the Google account in macOS Internet Accounts and enable Calendars. Confirm the events appear in Apple Calendar, then use Patter Settings → Connect Mac calendar and grant access. macOS requires full calendar access for EventKit reads; Patter's implementation only reads. Events refresh on launch or when connecting again. Direct Google OAuth, calendar selection and background refresh are future work.
 
 **Summaries:** Start a model in LM Studio's local server, then use `http://127.0.0.1:1234/v1`. For an existing Ollama server use `http://127.0.0.1:11434/v1`. Choose Find models, enter/select a model, and Save. The endpoint/model are preferences, not credentials. No cloud fallback is implemented.
+
+**Templates:** In Settings → Summary templates, choose a default and edit its instructions. Each template retains its own edits; Reset restores its built-in instructions. In a conversation's Overview, expand Summary template to override the default or add extra instructions. Changes apply on the next generation, using the same summary, decisions and next steps layout. Long-transcript processing also uses the selected instructions. Generated versions retain the exact instructions, template name, model and generation time; changing a template does not rewrite past summaries. Existing libraries default to General meeting without a database migration.
 
 **Transcription:** Obtain a compatible whisper.cpp GGML `.bin` model and select it in Settings. Model downloads are not automated. Import or record audio, open Transcript, and choose Transcribe recording. Language is auto-detected. Current capture transcription processes each chunk separately and labels the source (Microphone / Computer audio), not individual speakers. Longer track-level context and inference progress/cancellation need further work.
 
@@ -59,7 +62,7 @@ Backup restore is manual in this initial version. Quit Patter, preserve the curr
 ## Verified here
 
 - Production TypeScript/Vite build and Tauri `.app` packaging.
-- Four frontend storage/search tests and ten Rust storage/model/update-safety tests.
+- Five frontend storage/search/template tests and fourteen Rust storage/model/template/update-safety tests, including a mock local-model server that checks template guidance through long-transcript processing. This does not verify real model output quality.
 - Browser flows: note editing, retained versions, restore, archive/restore, text search, action checkbox persistence, tabs, sample audio play/seek, desktop and compact layouts. No browser console errors in the final inspection.
 - Native app launch, creating/editing a note, Cmd-Q and reopening with notes intact, importing synthetic WAV audio, and native playback.
 
@@ -67,6 +70,6 @@ Not yet verified: live capture, Google/EventKit permission flow, real Whisper or
 
 ## Attribution and licensing
 
-Patter is a fresh implementation inspired by [Anarlog](https://github.com/fastrepl/anarlog); no upstream application source was copied. The bundled example conversation and narration are synthetic. The logo was generated for Patter. Fonts are Fraunces and Nunito Sans, with Phosphor icons.
+Patter is a fresh implementation inspired by [Anarlog](https://github.com/fastrepl/anarlog); no upstream application source was copied. The bundled example conversation and narration are synthetic. The vector logo was created for Patter. Fonts are Fraunces and Nunito Sans, with Phosphor icons.
 
 No source-code license has been selected yet; public visibility does not grant a general license to this application's original code. Third-party components retain their own licenses; see `THIRD_PARTY_NOTICES.txt`.

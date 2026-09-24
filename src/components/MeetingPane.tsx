@@ -10,10 +10,12 @@ import {
   CircleNotch,
 } from "@phosphor-icons/react";
 import { AudioPlayer } from "./AudioPlayer";
-import type { Meeting } from "../lib/types";
+import { SummaryOptions } from "./SummaryOptions";
+import type { Meeting, Preferences } from "../lib/types";
 import { formatTime } from "../lib/types";
 export function MeetingPane({
   meeting,
+  preferences,
   onUpdate,
   onArchive,
   onImport,
@@ -27,6 +29,7 @@ export function MeetingPane({
   activeRecording,
 }: {
   meeting: Meeting;
+  preferences: Preferences;
   onUpdate: (m: Meeting) => void;
   onArchive: () => void;
   onImport: () => void;
@@ -173,6 +176,14 @@ export function MeetingPane({
         aria-labelledby={`tab-${tab}`}
         tabIndex={0}
       >
+        {tab === "overview" && (
+          <SummaryOptions
+            meeting={meeting}
+            preferences={preferences}
+            onUpdate={onUpdate}
+            busy={!!busy}
+          />
+        )}
         {tab === "overview" ? (
           meeting.summary ? (
             <>

@@ -40,7 +40,7 @@ export function Sidebar({
   return (
     <aside className="sidebar">
       <div className="brand">
-        <img src="/patter-mark.png" alt="" />
+        <img src="/patter-mark.svg" alt="" />
         <div>
           <strong>Patter</strong>
         </div>

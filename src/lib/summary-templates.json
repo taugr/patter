@@ -1,0 +1,27 @@
+[
+  {
+    "id": "general",
+    "name": "General meeting",
+    "instructions": "Give a concise overview of the main topics and outcomes. Capture explicit decisions and agreed next steps, including owners and dates when stated. Preserve unresolved questions and uncertainty."
+  },
+  {
+    "id": "one-to-one",
+    "name": "One-to-one",
+    "instructions": "Focus on progress, concerns, feedback, support needed and personal goals. Attribute viewpoints when the speaker is known. Distinguish suggestions from commitments, and capture agreed follow-ups without inferring feelings or performance ratings."
+  },
+  {
+    "id": "interview",
+    "name": "Interview",
+    "instructions": "Organize the summary around the main questions and the interviewee's answers, examples and themes. Preserve nuance, contradictions and unanswered questions. Do not turn observations into decisions or invent follow-up tasks. Only quote words that appear in the source."
+  },
+  {
+    "id": "brainstorm",
+    "name": "Brainstorm",
+    "instructions": "Group related ideas, alternatives, constraints and open questions into clear themes. Distinguish exploration from ideas explicitly selected. Include decisions only when agreed and next steps only when committed to; do not present every idea as a plan."
+  },
+  {
+    "id": "custom",
+    "name": "Custom",
+    "instructions": "Summarize the conversation clearly, preserving the details that matter."
+  }
+]

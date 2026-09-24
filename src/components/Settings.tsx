@@ -15,6 +15,12 @@ import {
   listMeetings,
 } from "../lib/storage";
 import type { Preferences } from "../lib/types";
+import {
+  instructionLimit,
+  summaryTemplate,
+  summaryTemplates,
+  templateInstructions,
+} from "../lib/templates";
 export function Settings({
   preferences,
   onSave,
@@ -121,6 +127,63 @@ export function Settings({
             </button>
           </div>
           <small>LM Studio: port 1234. Ollama: port 11434, with /v1.</small>
+        </section>
+        <section className="settings-section">
+          <h3>Summary templates</h3>
+          <p>
+            Choose a default and tailor its instructions. Each conversation can
+            use a different template.
+          </p>
+          <label>
+            Default template
+            <select
+              value={draft.summaryTemplate}
+              onChange={(e) =>
+                setDraft({ ...draft, summaryTemplate: e.target.value })
+              }
+            >
+              {summaryTemplates.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Template instructions
+            <textarea
+              rows={5}
+              maxLength={instructionLimit}
+              value={templateInstructions(draft.summaryTemplate, draft)}
+              onChange={(e) =>
+                setDraft({
+                  ...draft,
+                  templateInstructions: {
+                    ...draft.templateInstructions,
+                    [draft.summaryTemplate]: e.target.value,
+                  },
+                })
+              }
+            />
+          </label>
+          <button
+            className="text-button"
+            type="button"
+            disabled={
+              draft.templateInstructions[draft.summaryTemplate] === undefined
+            }
+            onClick={() => {
+              const instructions = { ...draft.templateInstructions };
+              delete instructions[draft.summaryTemplate];
+              setDraft({ ...draft, templateInstructions: instructions });
+            }}
+          >
+            Reset {summaryTemplate(draft.summaryTemplate).name} instructions
+          </button>
+          <small>
+            Each template keeps its edits. Summaries use the same overview,
+            decisions and next steps layout.
+          </small>
         </section>
         <section className="settings-section">
           <h3>Transcription</h3>

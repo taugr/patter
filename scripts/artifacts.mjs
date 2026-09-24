@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync, copyFileSync, mkdirSync, writeFileSync } from 'node:fs';
+import { readFileSync, readdirSync, copyFileSync, mkdirSync, writeFileSync, existsSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import assert from 'node:assert/strict';
 const {version} = JSON.parse(readFileSync('package.json','utf8'));
@@ -16,7 +16,9 @@ const signature = readFileSync(`${output}/Patter.app.tar.gz.sig`,'utf8').trim();
 assert(signature.length > 100, 'Missing updater signature');
 const decoded = Buffer.from(signature,'base64').toString('utf8');
 assert(decoded.includes(`version:${version}`),'Signature must bind the release version');
-const notes = `Patter ${version}\n\nPersonal preview for Apple Silicon Macs on macOS 15+. No Apple notarization. See the release page for installation instructions and verification limits.`;
+const changesPath = `release-notes/${version}.md`;
+const changes = existsSync(changesPath) ? readFileSync(changesPath, 'utf8').trim() : '';
+const notes = [`Patter ${version}`, changes, 'Personal preview for Apple Silicon Macs on macOS 15+. No Apple notarization. See the release page for installation instructions and verification limits.'].filter(Boolean).join('\n\n');
 writeFileSync(`${output}/latest.json`,JSON.stringify({version,notes,pub_date:new Date().toISOString(),platforms:{'darwin-aarch64':{url:`https://github.com/${repo}/releases/download/v${version}/Patter.app.tar.gz`,signature}}},null,2)+'\n');
 files.push('latest.json');
 writeFileSync(`${output}/SHA256SUMS`,files.map(name=>`${createHash('sha256').update(readFileSync(`${output}/${name}`)).digest('hex')}  ${name}`).join('\n')+'\n');

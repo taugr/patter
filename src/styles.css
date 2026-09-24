@@ -115,10 +115,8 @@ h3 {
 }
 .brand img {
   width: 47px;
-  height: 54px;
+  height: 47px;
   object-fit: contain;
-  border-radius: 8px;
-  mix-blend-mode: multiply;
 }
 .brand strong {
   font:
@@ -655,8 +653,6 @@ h3 {
   width: 75px;
   height: 75px;
   object-fit: contain;
-  border-radius: 8px;
-  mix-blend-mode: multiply;
 }
 .welcome h1 {
   font-size: 40px;
@@ -753,7 +749,10 @@ h3 {
   flex: 1;
 }
 .settings-section input,
-.settings-section select {
+.settings-section select,
+.settings-section textarea,
+.summary-options select,
+.summary-options textarea {
   border: 1px solid #d9d0c2;
   background: #fffcf6;
   border-radius: 8px;
@@ -761,6 +760,50 @@ h3 {
   width: 100%;
   font-size: 14px;
   font-weight: 400;
+}
+.settings-section textarea,
+.summary-options textarea {
+  resize: vertical;
+  line-height: 1.6;
+}
+.summary-options {
+  padding-top: 18px;
+}
+.summary-options[open] {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 16px;
+}
+.summary-options summary {
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--muted);
+}
+.summary-options summary span {
+  color: var(--teal);
+  font-weight: 700;
+  margin-left: 8px;
+}
+.summary-options fieldset {
+  margin: 16px 0 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.summary-options label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.summary-options p,
+.summary-options small {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+  margin-bottom: 12px;
 }
 .settings-section small {
   display: block;
@@ -1025,7 +1068,7 @@ h3 {
   }
   .brand img {
     width: 39px;
-    height: 47px;
+    height: 39px;
   }
 }
 @media (max-height: 760px) and (min-width: 701px) {

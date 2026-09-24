@@ -160,6 +160,31 @@ mod tests {
         assert!(db.execute("UPDATE versions SET data='{}'", []).is_err());
     }
     #[test]
+    fn summary_regeneration_keeps_the_previous_text_and_template_snapshot() {
+        let lib = memory();
+        let mut db = lib.db.lock().unwrap();
+        let mut original = fixture();
+        original["summary"] = json!("Original overview");
+        original["summarySource"] =
+            json!({"templateId":"general","instructions":"Original instructions"});
+        let first = save(&mut db, original).unwrap();
+        let mut regenerated = first.clone();
+        regenerated["summary"] = json!("Interview overview");
+        regenerated["summaryTemplate"] = json!("interview");
+        regenerated["summarySource"] =
+            json!({"templateId":"interview","instructions":"Revised instructions"});
+        let latest = save(&mut db, regenerated).unwrap();
+        let retained: String = db
+            .query_row(
+                "SELECT data FROM versions WHERE id=? AND revision=1",
+                [first["id"].as_str().unwrap()],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(serde_json::from_str::<Value>(&retained).unwrap(), first);
+        assert_eq!(load(&db, first["id"].as_str().unwrap()).unwrap(), latest);
+    }
+    #[test]
     fn restoring_never_detaches_audio() {
         let lib = memory();
         let mut db = lib.db.lock().unwrap();

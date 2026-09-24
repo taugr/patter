@@ -23,6 +23,16 @@ export interface Meeting {
   duration: number;
   notes: string;
   summary: string;
+  summaryTemplate?: string;
+  summaryInstructions?: string;
+  summarySource?: {
+    templateId: string;
+    templateName: string;
+    instructions: string;
+    extraInstructions: string;
+    model: string;
+    generatedAt: string;
+  };
   decisions: string[];
   actions: ActionItem[];
   transcript: Segment[];
@@ -45,12 +55,16 @@ export interface Preferences {
   model: string;
   whisperModel: string;
   calendarEnabled: boolean;
+  summaryTemplate: string;
+  templateInstructions: Record<string, string>;
 }
 export const defaultPreferences: Preferences = {
   endpoint: "http://127.0.0.1:1234/v1",
   model: "",
   whisperModel: "",
   calendarEnabled: false,
+  summaryTemplate: "general",
+  templateInstructions: {},
 };
 export function newMeeting(title = "Untitled conversation"): Meeting {
   return {
