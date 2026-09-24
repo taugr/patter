@@ -1,0 +1,40 @@
+{
+  "name": "patter",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.25.0",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "vitest run",
+    "tauri": "tauri",
+    "desktop": "tauri dev",
+    "desktop:build": "tauri build --bundles app",
+    "check": "tsc --noEmit",
+    "version:check": "node scripts/version.mjs --check",
+    "release:patch": "node scripts/version.mjs patch",
+    "release:minor": "node scripts/version.mjs minor"
+  },
+  "dependencies": {
+    "@fontsource/fraunces": "^5.2.7",
+    "@fontsource/nunito-sans": "^5.2.7",
+    "@phosphor-icons/react": "2.1.10",
+    "@tauri-apps/api": "2.11.1",
+    "@tauri-apps/plugin-dialog": "^2.7.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "2.11.5",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^5.0.4",
+    "fake-indexeddb": "^6.2.5",
+    "prettier": "^3.9.8",
+    "typescript": "~5.9.3",
+    "vite": "^6.4.2",
+    "vitest": "^3.2.4"
+  }
+}

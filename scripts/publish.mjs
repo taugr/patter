@@ -1,0 +1,15 @@
+import {execFileSync} from 'node:child_process';
+import {readFileSync} from 'node:fs';
+import assert from 'node:assert/strict';
+const {version}=JSON.parse(readFileSync('package.json','utf8'));
+const gh=(...args)=>execFileSync('gh',args,{encoding:'utf8'});
+const repo=process.env.GITHUB_REPOSITORY || 'taugr/patter';
+const releases=JSON.parse(gh('api','--paginate',`repos/${repo}/releases`));
+const release=releases.find(r=>r.tag_name===`v${version}`);
+assert(release?.draft,'Only a draft release can be published; published assets are immutable');
+const compare=(a,b)=>{const x=a.replace(/^v/,'').split('.').map(Number),y=b.replace(/^v/,'').split('.').map(Number);return x[0]-y[0]||x[1]-y[1]||x[2]-y[2]};
+assert(!releases.some(r=>!r.draft && !r.prerelease && compare(r.tag_name,version)>=0),'A same or newer stable release already exists');
+const assets=release.assets.map(a=>a.name);
+for(const name of [`Patter_${version}_aarch64.dmg`,'Patter.app.tar.gz','Patter.app.tar.gz.sig','latest.json','SHA256SUMS']) assert(assets.includes(name),`Missing ${name}`);
+gh('release','edit',`v${version}`,'--repo',repo,'--draft=false','--latest');
+console.log(`Published v${version}`);
