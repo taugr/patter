@@ -17,6 +17,7 @@ import { Dialog } from "./components/Dialog";
 import { Updates, type UpdateInfo } from "./components/Updates";
 import { version as appVersion } from "../package.json";
 import { Settings } from "./components/Settings";
+import { mergeAgentRefresh } from "./lib/agent-refresh";
 import * as storage from "./lib/storage";
 import {
   matchesSearch,
@@ -96,6 +97,8 @@ export default function App() {
   const inFlight = useRef<Promise<void> | null>(null);
   const recordingRef = useRef(recording);
   recordingRef.current = recording;
+  const [conflict, setConflict] = useState(false);
+  const recovering = useRef(false);
   const pending = useRef<Meeting | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const file = useRef<HTMLInputElement>(null);
@@ -103,15 +106,20 @@ export default function App() {
   meetingsRef.current = meetings;
   const selected = meetings.find((m) => m.id === selectedId);
   const reportError = useCallback(
-    (message: string) => setError(message.replace(/^Error:\s*/, "")),
+    (message: string) =>
+      setError(
+        message.includes("REVISION_CONFLICT")
+          ? "This conversation changed elsewhere. Review the latest version before retrying."
+          : message.replace(/^Error:\s*/, ""),
+      ),
     [],
   );
   function replace(m: Meeting) {
-    setMeetings((ms) =>
-      [m, ...ms.filter((x) => x.id !== m.id)].sort((a, b) =>
-        b.createdAt.localeCompare(a.createdAt),
-      ),
+    const next = [m, ...meetingsRef.current.filter((x) => x.id !== m.id)].sort(
+      (a, b) => b.createdAt.localeCompare(a.createdAt),
     );
+    meetingsRef.current = next;
+    setMeetings(next);
   }
   async function flush(): Promise<void> {
     clearTimeout(timer.current);
@@ -126,16 +134,27 @@ export default function App() {
     const task = (async () => {
       try {
         const saved = await storage.saveMeeting(m);
-        setMeetings((ms) =>
-          ms.map((x) =>
-            x.id === saved.id ? { ...x, revision: saved.revision } : x,
-          ),
+        const queued = pending.current as Meeting | null;
+        if (queued?.id === saved.id && queued.revision === m.revision)
+          queued.revision = saved.revision;
+        const next = meetingsRef.current.map((x) =>
+          x.id === saved.id && x.revision === m.revision
+            ? { ...x, revision: saved.revision }
+            : x,
         );
+        meetingsRef.current = next;
+        setMeetings(next);
         if (!pending.current) setSaving("");
       } catch (e) {
         if (!pending.current) pending.current = m;
-        setSaving("Not saved — retry needed");
-        reportError(`Your changes could not be saved: ${String(e)}`);
+        if (String(e).includes("REVISION_CONFLICT")) {
+          setConflict(true);
+          setSaving("Draft kept — conversation changed elsewhere");
+          setError("");
+        } else {
+          setSaving("Not saved — retry needed");
+          reportError(`Your changes could not be saved: ${String(e)}`);
+        }
         throw e;
       }
     })();
@@ -146,6 +165,87 @@ export default function App() {
       inFlight.current = null;
     }
   }
+  async function keepDraftCopy() {
+    const draft = pending.current;
+    if (!draft || recovering.current) return;
+    recovering.current = true;
+    setBusy("Saving your draft");
+    clearTimeout(timer.current);
+    try {
+      const copied = await storage.saveMeeting({
+        ...draft,
+        id: crypto.randomUUID(),
+        revision: 0,
+        title: `${draft.title} (recovered draft)`,
+        createdAt: new Date().toISOString(),
+      });
+      pending.current = null;
+      const latest = await storage.listMeetings();
+      meetingsRef.current = latest;
+      setMeetings(latest);
+      setSelectedId(copied.id);
+      setMode(copied.archived ? "archive" : "all");
+      setQuery("");
+      setConflict(false);
+      setError("");
+      setSaving("");
+      setNotice(
+        "Your draft was saved as a separate conversation. The other changes are preserved in the original.",
+      );
+    } catch (e) {
+      reportError(String(e));
+    } finally {
+      recovering.current = false;
+      setBusy("");
+    }
+  }
+  useEffect(() => {
+    if (!storage.native) return;
+    let disposed = false;
+    const stops: (() => void)[] = [];
+    async function refresh(openId?: string) {
+      try {
+        if (inFlight.current) await inFlight.current.catch(() => {});
+        const latest = await storage.listMeetings();
+        if (disposed) return;
+        const draft = pending.current;
+        const remote = latest.find((m) => m.id === draft?.id);
+        if (draft && remote && remote.revision !== draft.revision) {
+          clearTimeout(timer.current);
+          setConflict(true);
+          setSaving("Draft kept — conversation changed elsewhere");
+        }
+        const next = mergeAgentRefresh(meetingsRef.current, latest, draft?.id);
+        meetingsRef.current = next;
+        setMeetings(next);
+        if (openId) {
+          await flush();
+          setSelectedId(openId);
+          setDetailOpen(true);
+          setMode(
+            latest.find((m) => m.id === openId)?.archived ? "archive" : "all",
+          );
+          setQuery("");
+        }
+      } catch (e) {
+        reportError(String(e));
+      }
+    }
+    void Promise.all([
+      listen<string>("patter-agent-changed", () => void refresh()),
+      listen<string>(
+        "patter-agent-open",
+        ({ payload }) => void refresh(payload),
+      ),
+    ]).then((listeners) => {
+      if (disposed) listeners.forEach((stop) => stop());
+      else stops.push(...listeners);
+    });
+    return () => {
+      disposed = true;
+      stops.forEach((stop) => stop());
+    };
+  }, []);
   useEffect(() => {
     if (!storage.native) return;
     let disposed = false;
@@ -414,6 +514,21 @@ export default function App() {
           })
         }
       />
+      {conflict && (
+        <div className="agent-conflict" role="alert">
+          <p>
+            This conversation changed elsewhere. Your unsaved draft is still
+            here.
+          </p>
+          <button
+            className="secondary"
+            disabled={!!busy}
+            onClick={() => void keepDraftCopy()}
+          >
+            Save my draft as a separate conversation
+          </button>
+        </div>
+      )}
       <button className="mobile-back" onClick={() => setDetailOpen(false)}>
         <ArrowLeft size={18} />
         Conversations
@@ -429,7 +544,10 @@ export default function App() {
           onArchive={() =>
             void act(async () => {
               const archived = !selected.archived;
-              const m = await storage.saveMeeting({ ...selected, archived });
+              const current =
+                meetingsRef.current.find((m) => m.id === selected.id) ??
+                selected;
+              const m = await storage.saveMeeting({ ...current, archived });
               replace(m);
               setMode(archived ? "archive" : "all");
               setNotice(
@@ -625,7 +743,8 @@ export default function App() {
           onImported={async () => {
             const items = await storage.listMeetings();
             setMeetings(items);
-            if (!selectedId) setSelectedId(items.find((m) => !m.archived)?.id ?? "");
+            if (!selectedId)
+              setSelectedId(items.find((m) => !m.archived)?.id ?? "");
           }}
           preferences={preferences}
           installing={installingUpdate}
@@ -666,6 +785,9 @@ export default function App() {
                     if (!selected) return;
                     const m = await storage.saveMeeting({
                       ...v,
+                      revision:
+                        meetingsRef.current.find((m) => m.id === v.id)
+                          ?.revision ?? selected.revision,
                       recordings: selected.recordings,
                       archived: selected.archived,
                     });
@@ -682,6 +804,7 @@ export default function App() {
                       v.summary.slice(0, 70) ||
                       "A fresh conversation"}
                   </small>
+                  {v.agentChange && <small>Saved by a local agent</small>}
                   {v.summarySource && (
                     <small>Summary: {v.summarySource.templateName}</small>
                   )}

@@ -63,7 +63,7 @@ Application: `src-tauri/target/release/bundle/macos/Patter.app`. Model weights a
 
 ## First setup
 
-**Calendar:** Add the Google account in macOS Internet Accounts and enable Calendars. Confirm the events appear in Apple Calendar, then use Patter Settings → Connect Mac calendar and grant access. macOS requires full calendar access for EventKit reads; Patter's implementation only reads. Events refresh on launch or when connecting again. Direct Google OAuth, calendar selection and background refresh are future work.
+**Calendar:** Add the Google account in macOS Internet Accounts and enable Calendars. Confirm the events appear in Apple Calendar, then use Patter Settings → Calendar → Connect calendar and grant access. macOS requires full calendar access for EventKit reads; Patter's implementation only reads. Events refresh on launch or when connecting again. Direct Google OAuth, calendar selection and background refresh are future work.
 
 **Summaries:** Start a model in LM Studio's local server, then use `http://127.0.0.1:1234/v1`. For an existing Ollama server use `http://127.0.0.1:11434/v1`. Choose Find models, enter/select a model, and Save. The endpoint/model are preferences, not credentials. No cloud fallback is implemented.
 
@@ -117,3 +117,46 @@ cargo run --locked --manifest-path src-tauri/Cargo.toml --example transcription-
 ### Google Drive backup
 
 Connect your own Google Drive in Settings, choose a nightly time, or back up manually. Patter uploads new/changed recordings, readable transcripts/summaries, complete version history and nonsecret configuration. Previous backups are kept. A verified restore remaps paths for another Mac and preserves the current library in a safety folder. [Setup, coverage and validation limits](docs/google-drive-backup.md).
+
+## Connect an AI agent (MCP)
+
+**Available from v0.5.0.** Patter includes a local MCP server for Codex, Claude Desktop, Claude Code and other clients that support stdio. No separate server install or runtime is needed. Keep the Mac app open while connected.
+
+1. In **Settings → Agent access**, enable **Read entire library**.
+2. Optionally enable **Edit notes, titles and actions** or **Transcribe and summarize**. Permissions save immediately and apply to all connected agents.
+3. Use the [copyable setup prompt](docs/agent-access.md#set-up-with-a-prompt) in **Codex or Claude Code on your Mac**. It configures that client, preserves existing settings and checks the connection without reading conversations. For development builds or custom installs, append the JSON from **Connection setup → Copy settings**.
+4. Keep Patter open. Restart your client or start a new session if needed, then ask it to call `patter_status`.
+
+For a standard installation, these commands register the connection directly:
+
+**Codex:**
+
+```sh
+codex mcp add patter -- /Applications/Patter.app/Contents/MacOS/patter --mcp
+codex mcp list
+```
+
+**Claude Code:**
+
+```sh
+claude mcp add --scope user --transport stdio patter -- /Applications/Patter.app/Contents/MacOS/patter --mcp
+claude mcp get patter
+```
+
+For custom paths and development sockets, use the command and complete arguments from Patter’s **Connection setup**. The full guide includes [Codex’s TOML configuration](docs/agent-access.md#codex), [Claude Code](docs/agent-access.md#claude-code), and [Claude Desktop’s JSON setup](docs/agent-access.md#claude-desktop). Client configuration follows the official [Codex](https://developers.openai.com/codex/mcp/) and [Claude Code](https://code.claude.com/docs/en/mcp) documentation.
+
+| Tool | What it does |
+| --- | --- |
+| `search_conversations` | Search text or dates, including archived conversations. |
+| `get_conversation` | Read notes, summaries or timestamped transcripts, including older versions. |
+| `conversation_history` | List saved versions and agent attribution. |
+| `edit_conversation` | Update a title or notes, or check/uncheck an existing action. Requires edit permission. |
+| `list_templates` | List summary templates. |
+| `start_processing` | Transcribe saved audio or generate a summary using local models. Requires processing permission. |
+| `job_status` | Check a processing job’s progress or result. |
+| `open_conversation` | Show a conversation in Patter. |
+| `patter_status` | Check the app version, recording state and backup progress. |
+
+Read access covers the whole library, including archives and history. Cloud agents may send returned text to their model provider; Patter’s own processing stays local. Edits preserve history and reject stale revisions. Agents cannot delete data or start recording.
+
+See the [full setup guide](docs/agent-access.md) for example configuration, permissions, troubleshooting and developer checks.

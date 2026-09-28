@@ -90,12 +90,9 @@ export function TranscriptionSettings({
   return (
     <section className="settings-section">
       <h3>Transcription</h3>
-      <p>
-        Download a model once, then transcribe on your Mac. Your recordings stay
-        local.
-      </p>
+      <p>Download once; transcribe on your Mac.</p>
       <label>
-        Transcription model
+        Model
         <select
           value={draft.transcriptionModel}
           onChange={(e) => {
@@ -129,10 +126,7 @@ export function TranscriptionSettings({
               {selected.installed ? "Verify / repair" : "Download model"}
             </button>
           </div>
-          <small>
-            From Hugging Face · {selected.license}. Stored in Patter’s local
-            models folder.
-          </small>
+          <small>From Hugging Face · {selected.license}</small>
         </>
       ) : (
         <>
@@ -192,7 +186,6 @@ export function TranscriptionSettings({
           </div>
         </div>
       )}
-      {!native && <small>Model downloads are available in the Mac app.</small>}
       {message && (
         <p className="form-message" role="status">
           {message}

@@ -24,5 +24,10 @@ security-framework = "3"
 tauri-plugin-updater = "2"
 tauri-plugin-single-instance = "2"
 
+rmcp = { version = "=3.5.0", default-features = false, features = ["server", "transport-io"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "io-util", "time", "sync"] }
+libc = "0.2"
+
 [dev-dependencies]
+rmcp = { version = "=3.5.0", default-features = false, features = ["client", "transport-child-process"] }
 minisign-verify = "0.2"

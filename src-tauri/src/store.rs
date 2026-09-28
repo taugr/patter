@@ -72,7 +72,36 @@ pub fn load(db: &Connection, id: &str) -> Result<Value> {
         .map_err(|e| e.to_string())?;
     serde_json::from_str(&text).map_err(|e| e.to_string())
 }
-pub fn save(db: &mut Connection, mut data: Value) -> Result<Value> {
+/// Callers hold the library mutex across validation and commit.
+pub fn save_checked(db: &mut Connection, data: Value) -> Result<Value> {
+    save_checked_attributed(db, data, None)
+}
+pub fn save_checked_attributed(
+    db: &mut Connection,
+    data: Value,
+    attribution: Option<Value>,
+) -> Result<Value> {
+    let expected = data["revision"]
+        .as_i64()
+        .ok_or("Missing expected revision")?;
+    save_attributed(db, data, attribution, Some(expected))
+}
+
+pub fn save(db: &mut Connection, data: Value) -> Result<Value> {
+    save_attributed(db, data, None, None)
+}
+fn save_attributed(
+    db: &mut Connection,
+    mut data: Value,
+    attribution: Option<Value>,
+    expected: Option<i64>,
+) -> Result<Value> {
+    if let Some(object) = data.as_object_mut() {
+        object.remove("agentChange");
+    }
+    if let Some(attribution) = attribution {
+        data["agentChange"] = attribution;
+    }
     let id = data["id"]
         .as_str()
         .ok_or("Missing conversation id")?
@@ -82,6 +111,22 @@ pub fn save(db: &mut Connection, mut data: Value) -> Result<Value> {
         return Err("Invalid conversation data".into());
     }
     let tx = db.transaction().map_err(|e| e.to_string())?;
+    // Compare and write in the same transaction, including across independent connections.
+    if let Some(expected) = expected {
+        use rusqlite::OptionalExtension;
+        let actual: Option<i64> = tx
+            .query_row(
+                "SELECT json_extract(data, '$.revision') FROM meetings WHERE id=?",
+                [&id],
+                |row| row.get(0),
+            )
+            .optional()
+            .map_err(|e| e.to_string())?;
+        if expected != actual.unwrap_or(0) {
+            return Err("REVISION_CONFLICT: This conversation changed. Reload the latest version before saving; your draft has been kept.".into());
+        }
+    }
+
     let revision: i64 = tx
         .query_row(
             "SELECT COALESCE(MAX(revision),0)+1 FROM versions WHERE id=?",

@@ -78,18 +78,14 @@ describe("permanent conversation history", () => {
       (await listMeetings()).find((m) => m.id === original.id)?.archived,
     ).toBe(true);
   });
-  it("serializes simultaneous saves into distinct revisions", async () => {
+  it("rejects stale simultaneous saves instead of overwriting another editor", async () => {
     const m = newMeeting();
-    await Promise.all([
+    const results = await Promise.allSettled([
       saveMeeting({ ...m, notes: "one" }),
       saveMeeting({ ...m, notes: "two" }),
-      saveMeeting({ ...m, notes: "three" }),
     ]);
-    expect((await history(m.id)).map((v) => v.notes)).toEqual([
-      "three",
-      "two",
-      "one",
-    ]);
+    expect(results.map((r) => r.status)).toEqual(["fulfilled", "rejected"]);
+    expect((await history(m.id)).map((v) => v.notes)).toEqual(["one"]);
   });
   it("retains imported attachments when restoring an older version", async () => {
     const m = await saveMeeting(newMeeting());
@@ -97,7 +93,7 @@ describe("permanent conversation history", () => {
       m,
       new File(["audio-fixture"], "example.wav", { type: "audio/wav" }),
     );
-    const restored = await saveMeeting(m);
+    const restored = await saveMeeting({ ...m, revision: imported!.revision });
     expect(restored.recordings).toEqual(imported?.recordings);
     const attemptedRewrite = await saveMeeting({
       ...restored,

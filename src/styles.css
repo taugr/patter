@@ -1388,3 +1388,55 @@ h3 {
   color: #a0442f;
   font-size: 12px;
 }
+
+.agent-settings .agent-option {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+}
+.agent-option input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--accent, #388d83);
+  flex-shrink: 0;
+}
+.agent-settings details {
+  margin: 12px 0;
+}
+.agent-settings summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+.agent-settings .agent-config {
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 14px;
+  border-radius: 8px;
+  background: var(--bg, #f5f3ee);
+  font-size: 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+.agent-settings .agent-privacy {
+  font-size: 13px;
+}
+.agent-conflict {
+  position: fixed;
+  z-index: 50;
+  left: 50%;
+  bottom: 70px;
+  transform: translateX(-50%);
+  width: min(540px, calc(100vw - 32px));
+  padding: 18px;
+  background: #fff9e8;
+  border: 1px solid #c8aa61;
+  border-radius: 12px;
+  box-shadow: 0 6px 24px #0002;
+}
+.agent-conflict p {
+  margin: 0 0 12px;
+}

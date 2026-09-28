@@ -41,8 +41,7 @@ export function AnarlogImport({
     <section className="settings-section anarlog-import">
       <h3>Import from Anarlog</h3>
       <p>
-        Bring over conversations, notes, summaries and saved audio from Anarlog
-        1.0.27.
+        Import conversations, notes, summaries and audio from Anarlog 1.0.27.
       </p>
       <details>
         <summary>Moving from another Mac</summary>
@@ -82,7 +81,6 @@ export function AnarlogImport({
         <FolderOpen size={18} />
         Choose Anarlog folder
       </button>
-      {!native && <small>Available in the Mac app.</small>}
       {preview && (
         <div className="import-preview">
           <p>

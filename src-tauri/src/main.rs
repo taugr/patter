@@ -1,8 +1,10 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 mod activity;
+mod agent;
 mod anarlog;
 mod backup;
 mod models;
+mod services;
 mod store;
 mod templates;
 mod transcription;
@@ -42,6 +44,17 @@ fn helper(app: &tauri::AppHandle) -> Result<PathBuf> {
         .map_err(|e| e.to_string())?
         .join("resources/patter-native"))
 }
+fn parakeet_helper(app: &tauri::AppHandle) -> Result<PathBuf> {
+    if cfg!(debug_assertions) {
+        Ok(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources/patter-parakeet"))
+    } else {
+        Ok(app
+            .path()
+            .resource_dir()
+            .map_err(|e| e.to_string())?
+            .join("resources/patter-parakeet"))
+    }
+}
 #[tauri::command]
 fn list_meetings(lib: State<Library>) -> Result<Vec<Value>> {
     store::all(&*lock_db(&lib)?)
@@ -53,7 +66,7 @@ fn save_meeting(
     meeting: Value,
 ) -> Result<Value> {
     let _job = activity.job()?;
-    store::save(&mut *lock_db(&lib)?, meeting)
+    store::save_checked(&mut *lock_db(&lib)?, meeting)
 }
 #[tauri::command]
 fn meeting_history(lib: State<Library>, id: String) -> Result<Vec<Value>> {
@@ -88,29 +101,16 @@ async fn list_models(endpoint: String) -> Result<Vec<String>> {
 }
 #[tauri::command]
 async fn summarize(
+    app: tauri::AppHandle,
     lib: State<'_, Library>,
     activity: State<'_, activity::Activity>,
     id: String,
 ) -> Result<Value> {
     let _job = activity.job()?;
-    let (meeting, prefs) = {
-        let db = lock_db(&lib)?;
-        (store::load(&db, &id)?, store::preferences(&db)?)
-    };
-    let generated = models::summarize(&meeting, &prefs).await?;
-    let mut db = lock_db(&lib)?;
-    let mut latest = store::load(&db, &id)?;
-    latest["summary"] = generated["summary"].clone();
-    latest["summarySource"] = generated["summarySource"].clone();
-    latest["decisions"] = generated["decisions"].clone();
-    latest["actions"] = json!(generated["actions"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .filter_map(|a| a.as_str())
-        .map(|text| json!({"id":uuid::Uuid::new_v4().to_string(),"text":text,"done":false}))
-        .collect::<Vec<_>>());
-    store::save(&mut db, latest)
+    let job = services::prepare(&lib, &id, "summary", None)?;
+    let generated =
+        services::generate(&job, parakeet_helper(&app)?, activity.inner().clone()).await?;
+    services::finish(&lib, &job, generated, None)
 }
 fn audio_extension(path: &Path) -> Result<String> {
     let ext = path
@@ -409,31 +409,11 @@ async fn transcribe(
     activity: State<'_, activity::Activity>,
     id: String,
 ) -> Result<Value> {
-    let _outer_job = activity.job()?;
-    let job = activity.job()?;
-    let (meeting, prefs) = {
-        let db = lock_db(&lib)?;
-        (store::load(&db, &id)?, store::preferences(&db)?)
-    };
-    let root = lib.root.clone();
-    let parakeet = if cfg!(debug_assertions) {
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources/patter-parakeet")
-    } else {
-        app.path()
-            .resource_dir()
-            .map_err(|e| e.to_string())?
-            .join("resources/patter-parakeet")
-    };
-    let segments = tauri::async_runtime::spawn_blocking(move || {
-        let _job = job;
-        transcription::transcribe(&root, &meeting, &prefs, &parakeet)
-    })
-    .await
-    .map_err(|e| e.to_string())??;
-    let mut db = lock_db(&lib)?;
-    let mut latest = store::load(&db, &id)?;
-    latest["transcript"] = json!(segments);
-    store::save(&mut db, latest)
+    let _guard = activity.job()?;
+    let job = services::prepare(&lib, &id, "transcript", None)?;
+    let generated =
+        services::generate(&job, parakeet_helper(&app)?, activity.inner().clone()).await?;
+    services::finish(&lib, &job, generated, None)
 }
 #[tauri::command]
 fn transcription_models(
@@ -553,13 +533,32 @@ fn finish_quit(
     app.exit(0);
     Ok(())
 }
+fn app_library_root() -> Result<PathBuf> {
+    #[cfg(debug_assertions)]
+    if let Some(path) =
+        std::env::args().find_map(|arg| arg.strip_prefix("--qa-library=").map(PathBuf::from))
+    {
+        if !path.is_absolute() || !path.starts_with("/tmp") {
+            return Err("QA library must be an absolute /tmp path.".into());
+        }
+        return Ok(path);
+    }
+    backup::stable_root()
+}
 fn main() {
+    if std::env::args().nth(1).as_deref() == Some("--mcp") {
+        if let Err(error) = agent::mcp_main() {
+            eprintln!("{error}");
+            std::process::exit(1);
+        }
+        return;
+    }
     if std::env::args().any(|a| a == "--backup-worker") {
         // Headless execution must never initialize a webview or steal focus.
         std::process::exit(if backup::worker().is_ok() { 0 } else { 1 });
     }
     // Stable lock survives replacing the library directory during restore.
-    let backup_root = backup::stable_root().expect("Patter home folder unavailable");
+    let backup_root = app_library_root().expect("Patter home folder unavailable");
     let _app_lock = backup::process_lock(&backup_root, "app", true).ok();
     if _app_lock.is_some() {
         backup::apply_restore(&backup_root)
@@ -581,7 +580,7 @@ fn main() {
             capture: Mutex::new(None),
         })
         .setup(|app| {
-            let root = app.path().app_data_dir()?;
+            let root = app_library_root().map_err(std::io::Error::other)?;
             app.state::<activity::Activity>()
                 .set_root(&root)
                 .map_err(std::io::Error::other)?;
@@ -605,6 +604,7 @@ fn main() {
                 }
             }
             app.manage(library);
+            agent::start(app.handle());
             let menu = tauri::menu::Menu::default(app.handle())?;
             let check = tauri::menu::MenuItem::with_id(
                 app,
@@ -625,6 +625,8 @@ fn main() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            agent::agent_status,
+            agent::agent_configure,
             list_meetings,
             save_meeting,
             meeting_history,

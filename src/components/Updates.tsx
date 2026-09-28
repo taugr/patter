@@ -63,7 +63,6 @@ export function Updates({
           Save settings and finish recording or processing before installing.
         </small>
       )}
-      {!native && <small>Available in the Mac app.</small>}
       <p className="update-status" role="status">
         {status}
       </p>

@@ -760,7 +760,20 @@ mod tests {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         listener.set_nonblocking(true).unwrap();
         let mut browser = std::net::TcpStream::connect(listener.local_addr().unwrap()).unwrap();
-        let (mut accepted, _) = listener.accept().unwrap();
+        // connect() can finish before a nonblocking listener reports readiness on macOS.
+        let deadline = std::time::Instant::now() + Duration::from_secs(2);
+        let (mut accepted, _) = loop {
+            match listener.accept() {
+                Ok(connection) => break connection,
+                Err(e)
+                    if e.kind() == std::io::ErrorKind::WouldBlock
+                        && std::time::Instant::now() < deadline =>
+                {
+                    std::thread::sleep(Duration::from_millis(5))
+                }
+                Err(e) => panic!("Callback test accept failed: {e}"),
+            }
+        };
         browser.write_all(b"GET /callback?state=fixture").unwrap();
         let thread = std::thread::spawn(move || {
             let line = read_callback_line(&mut accepted).unwrap();

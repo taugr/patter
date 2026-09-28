@@ -77,6 +77,15 @@ export function saveMeeting(meeting: Meeting): Promise<Meeting> {
       let saved: Meeting;
       current.onsuccess = () => {
         const old = current.result as Meeting | undefined;
+        if (meeting.revision !== (old?.revision ?? 0)) {
+          reject(
+            new Error(
+              "REVISION_CONFLICT: This conversation changed. Your draft has been kept.",
+            ),
+          );
+          tx.abort();
+          return;
+        }
         saved = {
           ...meeting,
           recordings: [

@@ -11,11 +11,11 @@ import {
 } from "../lib/storage";
 import type { Preferences } from "../lib/types";
 import { TranscriptionSettings } from "./TranscriptionSettings";
+import { AgentSettings } from "./AgentSettings";
 import { BackupSettings } from "./BackupSettings";
 import { AnarlogImport } from "./AnarlogImport";
 import {
   instructionLimit,
-  summaryTemplate,
   summaryTemplates,
   templateInstructions,
 } from "../lib/templates";
@@ -68,6 +68,11 @@ export function Settings({
         if (!importing && !backingUp) onClose();
       }}
     >
+      {!native && (
+        <p className="form-message">
+          Browser preview. Disabled features are available in the Mac app.
+        </p>
+      )}
       {updates(
         busy ||
           importing ||
@@ -78,7 +83,7 @@ export function Settings({
       <fieldset className="settings-fields" disabled={installing || importing}>
         <section className="settings-section">
           <h3>Calendar</h3>
-          <p>Use calendars connected to your Mac, including Google Calendar.</p>
+          <p>Use your Mac’s calendars, including Google Calendar.</p>
           <button
             className="secondary"
             disabled={busy || !native}
@@ -90,10 +95,9 @@ export function Settings({
               })
             }
           >
-            Connect Mac calendar
+            Connect calendar
             <ArrowSquareOut size={16} />
           </button>
-          {!native && <small>Available in the Mac app.</small>}
         </section>
         <section className="settings-section">
           <h3>Summaries</h3>
@@ -116,7 +120,7 @@ export function Settings({
                 list="models"
                 value={draft.model}
                 onChange={(e) => setDraft({ ...draft, model: e.target.value })}
-                placeholder="Choose or enter a model"
+                placeholder="Model name"
               />
               <datalist id="models">
                 {models.map((m) => (
@@ -133,7 +137,7 @@ export function Settings({
                   setModels(found);
                   setMessage(
                     found.length
-                      ? `${found.length} models found. Choose one in the model field.`
+                      ? `${found.length} models found.`
                       : "The server has no loaded models.",
                   );
                 })
@@ -146,12 +150,9 @@ export function Settings({
         </section>
         <section className="settings-section">
           <h3>Summary templates</h3>
-          <p>
-            Choose a default and tailor its instructions. Each conversation can
-            use a different template.
-          </p>
+          <p>Choose a default; change it for individual conversations.</p>
           <label>
-            Default template
+            Default
             <select
               value={draft.summaryTemplate}
               onChange={(e) =>
@@ -166,7 +167,7 @@ export function Settings({
             </select>
           </label>
           <label>
-            Template instructions
+            Instructions
             <textarea
               rows={5}
               maxLength={instructionLimit}
@@ -194,12 +195,9 @@ export function Settings({
               setDraft({ ...draft, templateInstructions: instructions });
             }}
           >
-            Reset {summaryTemplate(draft.summaryTemplate).name} instructions
+            Reset instructions
           </button>
-          <small>
-            Each template keeps its edits. Summaries use the same overview,
-            decisions and next steps layout.
-          </small>
+          <small>Instructions are saved per template.</small>
         </section>
         <TranscriptionSettings
           draft={draft}
@@ -208,10 +206,7 @@ export function Settings({
         />
         <section className="settings-section">
           <h3>Library</h3>
-          <p>
-            Conversations, audio and previous versions are kept, even when
-            archived.
-          </p>
+          <p>Archived conversations keep their audio and version history.</p>
           <button
             className="secondary"
             disabled={busy || importing || backingUp}
@@ -224,16 +219,14 @@ export function Settings({
                     const saved = await invoke<string>("backup_library", {
                       destination: path,
                     });
-                    setMessage(`Complete library backup saved to ${saved}`);
+                    setMessage(`Library backup saved to ${saved}`);
                   }
                 } else {
                   downloadJson(
                     "patter-preview-notes.json",
                     await listMeetings(),
                   );
-                  setMessage(
-                    "Notes exported. This preview export does not include audio files.",
-                  );
+                  setMessage("Notes exported without audio.");
                 }
               })
             }
@@ -242,6 +235,9 @@ export function Settings({
             {native ? "Back up library" : "Export preview notes"}
           </button>
         </section>
+        <AgentSettings
+          disabled={busy || installing || importing || backingUp}
+        />
         <BackupSettings
           disabled={busy || installing || importing}
           beforeBackup={async () => {

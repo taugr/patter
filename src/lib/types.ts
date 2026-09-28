@@ -39,6 +39,7 @@ export interface Meeting {
   recordings: Recording[];
   archived: boolean;
   revision: number;
+  agentChange?: { source: string; tool: string; at: string };
   sample?: boolean;
   eventId?: string;
 }

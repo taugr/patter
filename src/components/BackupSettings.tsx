@@ -106,8 +106,7 @@ export function BackupSettings({
     <section className="settings-section drive-backup">
       <h3>Google Drive backup</h3>
       <p>
-        Keep a copy of your conversations, recordings, summaries and settings in
-        your own Drive.
+        Back up conversations, recordings, summaries and settings to your Drive.
       </p>
       {!data?.config.connected ? (
         <>
@@ -120,7 +119,7 @@ export function BackupSettings({
             Connect Google Drive
           </button>
           <details className="backup-setup">
-            <summary>One-time Google setup</summary>
+            <summary>Google setup</summary>
             <p>
               In Google Cloud Console, enable the Drive API and create an OAuth
               client with application type <strong>Desktop app</strong>.
@@ -172,7 +171,7 @@ export function BackupSettings({
           )}
           <div className="backup-schedule">
             <label>
-              Nightly backup time
+              Nightly time
               <input
                 type="time"
                 value={time}
@@ -225,7 +224,7 @@ export function BackupSettings({
           <div className="backup-status" aria-live="polite">
             <strong>
               {data.running
-                ? "Backup activity in progress…"
+                ? "Backup in progress…"
                 : data.status.lastSuccess
                   ? `Last verified backup: ${new Date(data.status.lastSuccess).toLocaleString()}`
                   : "No verified backup yet"}
@@ -341,7 +340,7 @@ export function BackupSettings({
                 disabled={locked}
                 onClick={() => void act(() => connect(true))}
               >
-                Choose another OAuth setup file
+                Change OAuth setup file
               </button>
               <button
                 className="text-button"
@@ -383,11 +382,10 @@ export function BackupSettings({
           </button>
         </div>
       )}
-      {!native && <small>Available in the Mac app.</small>}
       <small>
-        Files are readable in Drive. Previous backups are kept. Model downloads
-        and passwords are excluded; restored Macs need models and account
-        connections set up again.
+        Files are readable in Drive; previous backups are kept. Models and
+        passwords are excluded. After restoring, download models and reconnect
+        accounts.
       </small>
       {message && (
         <p className="form-message" role="status">
