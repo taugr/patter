@@ -1,6 +1,6 @@
 # Google Drive backups for Patter
 
-Status: implemented locally; see [setup and validation](google-drive-backup.md). Live production OAuth, real Drive backup/restore, and LaunchAgent catch-up with Patter closed passed on 28 September 2026. The changed ad-hoc signature prevented unattended Keychain access after a test update. Explicit reconnection now creates a fresh protected credential item, preserves the backup identity and schedule, and has passed a real resumed background backup. Ad-hoc updates still require that reconnection; seamless migration is not claimed. Patter now has its own Drive folder and enabled schedule on the validation Mac. Existing Anarlog backup jobs were not changed.
+Status: included in v0.4.0; see [setup and validation](google-drive-backup.md). Live production OAuth, real Drive backup/restore, and LaunchAgent catch-up with Patter closed passed on 28 September 2026. The changed ad-hoc signature prevented unattended Keychain access after a test update. Explicit reconnection now creates a fresh protected credential item, preserves the backup identity and schedule, and has passed a real resumed background backup. Ad-hoc updates still require that reconnection; seamless migration is not claimed. Patter now has its own Drive folder and enabled schedule on the validation Mac. Existing Anarlog backup jobs were not changed.
 
 ## Intended experience
 

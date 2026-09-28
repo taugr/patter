@@ -45,7 +45,7 @@ Automated gates cover frontend persistence/search, native activity exclusion, im
 
 ## Import an Anarlog 1.0.27 library
 
-This feature is currently in the local development build, pending the next release.
+Available from Patter v0.4.0.
 
 1. On the old Mac, open Anarlog's **Settings → Storage** and locate **Content**. Its default is `~/Library/Application Support/hyprnote/`; a custom location may differ.
 2. Quit Anarlog so its files stop changing. Copy the entire Content folder (including `sessions/` and its nested folders) to the new Mac using AirDrop or an external drive. Keep the original.
@@ -60,4 +60,4 @@ Import never writes to the source. Patter snapshots its database first, verifies
 
 ## Google Drive backups
 
-The local development build includes **Settings → Google Drive backup** for manual/nightly backups and verified restore on another Mac. It requires one-time Google Desktop OAuth setup and your sign-in. Follow the [setup guide](docs/google-drive-backup.md). This creates Patter's own launchd job only when you enable nightly backups; existing Anarlog backup jobs are untouched. Real Drive backup/restore and LaunchAgent catch-up with the app closed have passed. After an ad-hoc app update, use **Reconnect Google Drive** if prompted, select the original Google setup JSON and sign in again. The verified recovery path preserves your backup history and schedule and resumes due backups. Reconnection is required because each changed ad-hoc signature has a different Keychain identity.
+Patter v0.4.0 includes **Settings → Google Drive backup** for manual/nightly backups and verified restore on another Mac. It requires one-time Google Desktop OAuth setup and your sign-in. Follow the [setup guide](docs/google-drive-backup.md). This creates Patter's own launchd job only when you enable nightly backups; existing Anarlog backup jobs are untouched. Real Drive backup/restore and LaunchAgent catch-up with the app closed have passed. After an ad-hoc app update, use **Reconnect Google Drive** if prompted, select the original Google setup JSON and sign in again. The verified recovery path preserves your backup history and schedule and resumes due backups. Reconnection is required because each changed ad-hoc signature has a different Keychain identity.

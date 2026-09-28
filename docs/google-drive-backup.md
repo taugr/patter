@@ -1,6 +1,6 @@
 # Google Drive backup
 
-Implemented in the local development build; not yet published. Patter uses its existing Rust/Tauri process and Google's API directly. No hosted service or separate backup-tool installation is needed.
+Available from Patter v0.4.0. Patter uses its existing Rust/Tauri process and Google's API directly. No hosted service or separate backup-tool installation is needed.
 
 ## Connect once
 

@@ -28,7 +28,7 @@
 
 A personal, local-first meeting notebook for Apple Silicon Macs running macOS 15 or later. Built with Tauri 2, Rust, SQLite, Swift audio/calendar and Parakeet helpers, and React + Vite. No hosted backend, account system, analytics, Electron runtime, or bundled model weights.
 
-Patter is in active personal development. The published release is **v0.3.0**; Parakeet model downloads, Anarlog import and Google Drive backup are implemented locally and pending publication. The sections below describe the development build. Native audio capture, Calendar permissions and summary-model inference still need a supervised setup and reliability pass before relying on Patter for important meetings.
+Patter is in active personal development. **v0.4.0** adds Parakeet model downloads, Anarlog import and Google Drive backup. Native audio capture, Calendar permissions and summary-model inference still need a supervised setup and reliability pass before relying on Patter for important meetings.
 
 ## Install and updates
 
@@ -84,7 +84,7 @@ On this Mac: `~/Library/Application Support/gr.tau.patter/`.
 
 Patter never automatically purges these files. Archive changes visibility. Each committed edit/regeneration is versioned; draft keystrokes are coalesced with a 600 ms debounce, and normal closing/quit waits for pending saves. Forced termination can lose an unsaved draft or the currently open capture chunk. App retention cannot protect against disk failure or manual filesystem deletion: use library backups.
 
-The published release uses manual library restore: quit Patter and preserve the current library separately before restoring. Recording paths are absolute, so moving that backup to another account/path requires migration. The development build adds validated Google Drive restore with path remapping and a retained safety copy of the previous library; see [backup and restore instructions](docs/google-drive-backup.md). Real Drive backup/restore and LaunchAgent catch-up with Patter closed have passed. After an ad-hoc update, Patter may require Drive reconnection using the original Google setup JSON. That recovery path and resumed background backup have been verified; see the backup guide for the evidence and remaining checks. Low-disk, long-call, sleep/wake and device-change checks are also outstanding.
+For manual library restore, quit Patter and preserve the current library separately before restoring. Recording paths are absolute, so moving a manual backup to another account/path requires migration. Google Drive restore validates backups, remaps recording paths and retains a safety copy of the previous library; see [backup and restore instructions](docs/google-drive-backup.md). Real Drive backup/restore and LaunchAgent catch-up with Patter closed have passed. After an ad-hoc update, Patter may require Drive reconnection using the original Google setup JSON. That recovery path and resumed background backup have been verified; see the backup guide for the evidence and remaining checks. Low-disk, long-call, sleep/wake and device-change checks are also outstanding.
 
 ## Verified here
 
@@ -112,8 +112,8 @@ An opt-in smoke test downloads a model into a separate test directory, transcrib
 cargo run --locked --manifest-path src-tauri/Cargo.toml --example transcription-smoke -- /tmp/patter-transcription-proof parakeet-v3 public/sample-conversation.wav
 ```
 
-**Moving from Anarlog 1.0.27:** Settings → Import from Anarlog previews and imports a copied Content/sessions folder, including notes, summaries, transcripts and retained audio. Original session files are preserved, repeat imports skip unchanged conversations, and existing Patter edits are never overwritten. See [the transfer instructions and format limits](INSTALL.md#import-an-anarlog-1027-library). This importer is pending publication in the next app release.
+**Moving from Anarlog 1.0.27:** Settings → Import from Anarlog previews and imports a copied Content/sessions folder, including notes, summaries, transcripts and retained audio. Original session files are preserved, repeat imports skip unchanged conversations, and existing Patter edits are never overwritten. See [the transfer instructions and format limits](INSTALL.md#import-an-anarlog-1027-library). Available from v0.4.0.
 
-### Google Drive backup (local development build)
+### Google Drive backup
 
 Connect your own Google Drive in Settings, choose a nightly time, or back up manually. Patter uploads new/changed recordings, readable transcripts/summaries, complete version history and nonsecret configuration. Previous backups are kept. A verified restore remaps paths for another Mac and preserves the current library in a safety folder. [Setup, coverage and validation limits](docs/google-drive-backup.md).
