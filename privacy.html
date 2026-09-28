@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="How Patter stores your conversations and uses optional Google Drive access for backups.">
+  <title>Privacy policy — Patter</title>
+  <link rel="icon" href="patter-icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="wrap"><a class="brand" href="./"><img src="patter-icon.svg" width="44" height="44" alt="">Patter</a><nav aria-label="Main"><a href="./">Home</a><a href="https://github.com/taugr/patter">GitHub ↗</a></nav></header>
+  <main class="wrap policy">
+    <p class="eyebrow">Your data, in plain language</p>
+    <h1>Privacy policy</h1>
+    <p class="caption">Last updated: 28 September 2026</p>
+    <p class="intro">Patter is a personal macOS meeting notebook developed by Thomas Auger. Your library lives on your Mac. Connecting Google Drive is optional.</p>
+    <p>This policy describes the app, including the Google Drive backup feature currently being validated in the development build. Feature availability depends on the installed version.</p>
+    <h2>What Patter stores</h2>
+    <p>Patter stores recordings you import or capture, transcripts, notes, generated summaries, action items, conversation history and settings in your local application library. Calendar access lets you create notes from events in calendars connected to macOS. Patter reads calendar events; it does not edit them.</p>
+    <h2>Local transcription and summaries</h2>
+    <p>Transcription runs on your Mac using downloaded models. Summaries use the local model server you configure. Patter restricts that connection to the local machine and does not provide a cloud inference fallback. Patter does not send your conversations to its developer for processing or use them to train general-purpose AI models.</p>
+    <h2>Google Drive access and use</h2>
+    <p>If you connect Drive, Patter requests the <code>drive.file</code> permission: access to files it creates or files you explicitly open with the app. It does not request access to your entire Drive. It reads your Google account email address to show which account is connected.</p>
+    <p>Patter uses this access to create its backup folder, upload new or changed backup files, verify completed uploads, list available snapshots, and download and verify a backup you choose to restore. Backups include recordings, transcripts, notes, generated summaries, full database history and nonsecret configuration. Downloaded model weights, temporary processing files, credentials and macOS permissions are excluded.</p>
+    <p>Google account authorization credentials are stored in macOS Keychain, not in your library backups. Drive backup data is sent directly from your Mac to Google over HTTPS. Backup files do not have additional client-side encryption and can be read by anyone to whom you grant access in Drive.</p>
+    <p>Patter’s use and transfer of information received from Google APIs adheres to the <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>, including the Limited Use requirements. Google data is used only to provide the backup, restore and connected-account features described here.</p>
+    <h2>Sharing and other network connections</h2>
+    <p>Patter has no developer-operated backend or analytics. The developer does not receive your library or Google authorization credentials through normal app use. Patter does not sell personal data, use it for advertising, or share Google user data with advertising or data-broker services.</p>
+    <p>Optional Drive backup sends your selected library’s backup data to Google. Model downloads contact Hugging Face, and update checks and downloads contact GitHub. Those providers receive ordinary connection information, such as your IP address, and handle it under their own policies. This website uses no analytics, cookies or external fonts; its hosting provider may keep ordinary request logs.</p>
+    <h2>Retention and your controls</h2>
+    <p>Patter retains recordings and committed conversation versions. Archiving hides an item without deleting it. Drive backups keep historical snapshots and do not automatically mirror local deletions.</p>
+    <p>You can pause scheduled backups or disconnect Drive in Settings. Disconnecting removes this library’s locally stored Google authorization credential; existing backups remain in your Drive. You can also revoke access in your <a href="https://myaccount.google.com/connections">Google account connections</a>.</p>
+    <p>You control the local library and Drive files. To remove data permanently, delete the relevant local library and backup files yourself, including any retained restore safety folders and Drive trash. Patter’s app interface does not provide a permanent conversation-delete command. Exporting or restoring a library may create additional copies under your control.</p>
+    <h2>Questions and changes</h2>
+    <p>Contact the developer through <a href="https://github.com/taugr/patter/issues">Patter’s support page</a>. It is public, so do not post recordings, transcripts, credentials or other private information. This policy will be updated when relevant data-handling behavior changes; the date above identifies the latest revision.</p>
+  </main>
+  <footer class="wrap"><span>Patter · A personal notebook for Mac</span><nav aria-label="Footer"><a href="./">Home</a><a href="https://github.com/taugr/patter/issues">Contact / support</a></nav></footer>
+</body>
+</html>
