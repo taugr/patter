@@ -50,6 +50,7 @@ export interface CalendarEvent {
   end: string;
   url?: string;
   calendar: string;
+  calendarId?: string;
 }
 export interface Preferences {
   endpoint: string;
@@ -57,6 +58,11 @@ export interface Preferences {
   whisperModel: string;
   transcriptionModel: string;
   calendarEnabled: boolean;
+  reminderEnabled: boolean;
+  reminderMinutes: number;
+  reminderSound: boolean;
+  reminderShowTitle: boolean;
+  reminderCalendars: string[];
   summaryTemplate: string;
   templateInstructions: Record<string, string>;
 }
@@ -66,6 +72,11 @@ export const defaultPreferences: Preferences = {
   whisperModel: "",
   transcriptionModel: "parakeet-v3",
   calendarEnabled: false,
+  reminderEnabled: false,
+  reminderMinutes: 5,
+  reminderSound: true,
+  reminderShowTitle: true,
+  reminderCalendars: [],
   summaryTemplate: "general",
   templateInstructions: {},
 };

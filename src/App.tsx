@@ -11,6 +11,11 @@ import {
   Check,
   ArrowLeft,
 } from "@phosphor-icons/react";
+import {
+  MeetingReminders,
+  type ReminderState,
+} from "./components/MeetingReminders";
+import { useZoom } from "./lib/use-zoom";
 import { Sidebar } from "./components/Sidebar";
 import { MeetingPane } from "./components/MeetingPane";
 import { Dialog } from "./components/Dialog";
@@ -85,6 +90,14 @@ export default function App() {
   const [modal, setModal] = useState<"record" | "settings" | "history" | null>(
     null,
   );
+  const [reminders, setReminders] = useState<ReminderState>({
+    events: [],
+    alerts: [],
+    requested: null,
+    error: null,
+    notificationError: null,
+    lastUpdated: null,
+  });
   const [versions, setVersions] = useState<Meeting[]>([]);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -316,6 +329,32 @@ export default function App() {
   useEffect(() => {
     if (ready) void checkUpdates(true);
   }, [ready]);
+  useEffect(() => {
+    if (!storage.native || !ready) return;
+    let cancelled = false;
+    let polling = false;
+    const refresh = async () => {
+      if (polling) return;
+      polling = true;
+      try {
+        const state = await invoke<ReminderState>("reminder_status");
+        if (!cancelled) {
+          setReminders(state);
+          setEvents(state.events);
+        }
+      } catch (error) {
+        if (!cancelled) reportError(String(error));
+      } finally {
+        polling = false;
+      }
+    };
+    void refresh();
+    const interval = setInterval(() => void refresh(), 3000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [ready, reportError]);
   function update(m: Meeting) {
     replace(m);
     pending.current = m;
@@ -397,6 +436,7 @@ export default function App() {
       reportError(String(e));
     }
   }
+  const { zoom, setZoom } = useZoom(reportError);
   async function create(title?: string) {
     const m = await storage.saveMeeting(newMeeting(title));
     replace(m);
@@ -410,6 +450,39 @@ export default function App() {
     await flush();
     setSelectedId(m.id);
     setDetailOpen(true);
+  }
+  async function openCalendarEvent(event: CalendarEvent): Promise<Meeting> {
+    await flush();
+    const existing = meetingsRef.current.find((m) => m.eventId === event.id);
+    if (existing) {
+      await choose(existing);
+      setMode(existing.archived ? "archive" : "all");
+      setQuery("");
+      return existing;
+    }
+    const saved = await storage.saveMeeting({
+      ...newMeeting(event.title),
+      eventId: event.id,
+      notes: `${event.calendar}\n${new Date(event.start).toLocaleString()}${event.url ? `\n${event.url}` : ""}`,
+    });
+    replace(saved);
+    setSelectedId(saved.id);
+    setMode("all");
+    setQuery("");
+    setDetailOpen(true);
+    return saved;
+  }
+  async function recordCalendarEvent(event: CalendarEvent) {
+    if (recordingRef.current || busy || installingRef.current)
+      throw new Error("Finish the current recording or task first.");
+    setBusy("Starting recording");
+    try {
+      const meeting = await openCalendarEvent(event);
+      await storage.startRecording(meeting.id);
+      setRecording(meeting.id);
+    } finally {
+      setBusy("");
+    }
   }
   async function importFile(f?: File) {
     if (!storage.native && !f) {
@@ -499,20 +572,27 @@ export default function App() {
         events={displayedEvents}
         onEvent={(event) =>
           void act(async () => {
-            const existing = meetings.find((m) => m.eventId === event.id);
-            if (existing) {
-              await choose(existing);
-            } else {
-              const m = await create(event.title);
-              const saved = await storage.saveMeeting({
-                ...m,
-                eventId: event.id,
-                notes: `${event.calendar}\n${new Date(event.start).toLocaleString()}${event.url ? `\n${event.url}` : ""}`,
-              });
-              replace(saved);
-            }
+            await openCalendarEvent(event);
           })
         }
+      />
+      <MeetingReminders
+        state={reminders}
+        disabled={
+          !!busy || !!recording || !!modal || conflict || installingUpdate
+        }
+        onRecord={recordCalendarEvent}
+        onOpen={async (event) => {
+          await openCalendarEvent(event);
+        }}
+        onDismiss={(id) =>
+          setReminders((state) => ({
+            ...state,
+            alerts: state.alerts.filter((event) => event.id !== id),
+            requested: null,
+          }))
+        }
+        onError={reportError}
       />
       {conflict && (
         <div className="agent-conflict" role="alert">
@@ -739,6 +819,21 @@ export default function App() {
       )}
       {modal === "settings" && (
         <Settings
+          calendarEvents={events}
+          reminderError={reminders.error || reminders.notificationError}
+          onPreviewReminder={() => {
+            const event: CalendarEvent = {
+              id: "preview-reminder",
+              title: "Example meeting",
+              calendar: "Example calendar",
+              start: new Date(Date.now() + 300000).toISOString(),
+              end: new Date(Date.now() + 3600000).toISOString(),
+            };
+            setReminders((state) => ({ ...state, alerts: [event] }));
+            setModal(null);
+          }}
+          zoom={zoom}
+          onZoom={setZoom}
           beforeImport={flush}
           onImported={async () => {
             const items = await storage.listMeetings();

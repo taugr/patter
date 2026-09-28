@@ -4,6 +4,8 @@ mod agent;
 mod anarlog;
 mod backup;
 mod models;
+mod notifications;
+mod reminders;
 mod services;
 mod store;
 mod templates;
@@ -91,9 +93,19 @@ fn set_preferences(
     preferences: Value,
 ) -> Result<()> {
     let _job = activity.job()?;
+    reminders::validate(&preferences)?;
     models::local_url(preferences["endpoint"].as_str().unwrap_or(""))?;
     lock_db(&lib)?.execute("INSERT INTO preferences(id,data) VALUES(1,?) ON CONFLICT(id) DO UPDATE SET data=excluded.data",[preferences.to_string()]).map_err(|e|e.to_string())?;
     Ok(())
+}
+#[tauri::command]
+fn set_zoom(window: tauri::WebviewWindow, percent: u32) -> Result<()> {
+    if ![75, 80, 90, 100, 110, 125, 150, 175, 200].contains(&percent) {
+        return Err("Choose a zoom level between 75% and 200%.".into());
+    }
+    window
+        .set_zoom(percent as f64 / 100.0)
+        .map_err(|e| e.to_string())
 }
 #[tauri::command]
 async fn list_models(endpoint: String) -> Result<Vec<String>> {
@@ -160,14 +172,20 @@ async fn calendar_events(
     app: tauri::AppHandle,
     activity: State<'_, activity::Activity>,
 ) -> Result<Value> {
-    let job = activity.job()?;
-    let bin = helper(&app)?;
+    let _job = activity.job()?;
+    read_calendar(&app, true).await
+}
+async fn read_calendar(app: &tauri::AppHandle, request_access: bool) -> Result<Value> {
+    let job = app.state::<activity::Activity>().job()?;
+    let bin = helper(app)?;
     tauri::async_runtime::spawn_blocking(move || {
         let _job = job;
-        let output = Command::new(bin)
-            .arg("calendar")
-            .output()
-            .map_err(|e| e.to_string())?;
+        let mut command = Command::new(bin);
+        command.arg("calendar");
+        if !request_access {
+            command.arg("--no-prompt");
+        }
+        let output = command.output().map_err(|e| e.to_string())?;
         let data: Value = serde_json::from_slice(&output.stdout).map_err(|_| {
             format!(
                 "Calendar access failed: {}",
@@ -576,6 +594,7 @@ fn main() {
         .manage(transcription_models::Downloads::default())
         .manage(updates::Pending::default())
         .plugin(tauri_plugin_dialog::init())
+        .manage(reminders::Reminders::default())
         .manage(Runtime {
             capture: Mutex::new(None),
         })
@@ -605,6 +624,7 @@ fn main() {
             }
             app.manage(library);
             agent::start(app.handle());
+            reminders::start(app.handle());
             let menu = tauri::menu::Menu::default(app.handle())?;
             let check = tauri::menu::MenuItem::with_id(
                 app,
@@ -616,8 +636,45 @@ fn main() {
             if let Some(tauri::menu::MenuItemKind::Submenu(submenu)) = menu.items()?.first() {
                 submenu.insert(&check, 1)?;
             }
+            let view = menu
+                .items()?
+                .into_iter()
+                .find_map(|item| match item {
+                    tauri::menu::MenuItemKind::Submenu(submenu)
+                        if submenu.text().ok().as_deref() == Some("View") =>
+                    {
+                        Some(submenu)
+                    }
+                    _ => None,
+                })
+                .ok_or("View menu is unavailable")?;
+            for (id, title, shortcut) in [
+                ("zoom-in", "Zoom In", "CmdOrCtrl+="),
+                ("zoom-out", "Zoom Out", "CmdOrCtrl+-"),
+                ("zoom-reset", "Actual Size", "CmdOrCtrl+0"),
+            ] {
+                view.append(&tauri::menu::MenuItem::with_id(
+                    app,
+                    id,
+                    title,
+                    true,
+                    Some(shortcut),
+                )?)?;
+            }
             app.set_menu(menu)?;
             app.on_menu_event(|app, event| {
+                match event.id().as_ref() {
+                    "zoom-in" => {
+                        let _ = app.emit("patter-zoom", "in");
+                    }
+                    "zoom-out" => {
+                        let _ = app.emit("patter-zoom", "out");
+                    }
+                    "zoom-reset" => {
+                        let _ = app.emit("patter-zoom", "reset");
+                    }
+                    _ => {}
+                }
                 if event.id().as_ref() == "check-updates" {
                     let _ = app.emit("patter-check-updates", ());
                 }
@@ -632,10 +689,15 @@ fn main() {
             meeting_history,
             get_preferences,
             set_preferences,
+            set_zoom,
             list_models,
             summarize,
             import_audio,
             calendar_events,
+            reminders::reminder_status,
+            reminders::dismiss_reminder,
+            reminders::test_reminder,
+            notifications::request_reminder_permission,
             start_recording,
             stop_recording,
             recording_status,

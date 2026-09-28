@@ -28,6 +28,11 @@ rmcp = { version = "=3.5.0", default-features = false, features = ["server", "tr
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "io-util", "time", "sync"] }
 libc = "0.2"
 
+objc2 = "0.6"
+objc2-foundation = "0.3"
+objc2-user-notifications = { version = "0.3", features = ["block2"] }
+block2 = "0.6"
+
 [dev-dependencies]
 rmcp = { version = "=3.5.0", default-features = false, features = ["client", "transport-child-process"] }
 minisign-verify = "0.2"

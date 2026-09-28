@@ -1440,3 +1440,25 @@ h3 {
 .agent-conflict p {
   margin: 0 0 12px;
 }
+
+.meeting-reminders {
+  position: fixed;
+  right: 24px;
+  bottom: 90px;
+  z-index: 20;
+  width: min(430px, calc(100vw - 48px));
+  max-height: 60vh;
+  overflow: auto;
+  display: grid;
+  gap: 12px;
+}
+.meeting-reminder {
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--paper, #faf7ef);
+  box-shadow: 0 8px 32px #163a3b24;
+}
+.meeting-reminder strong, .meeting-reminder small { display: block; }
+.meeting-reminder small { margin-top: 4px; }
+.reminder-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }

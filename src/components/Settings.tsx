@@ -1,6 +1,7 @@
 import { type ReactNode, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Check, DownloadSimple, ArrowSquareOut } from "@phosphor-icons/react";
+import { zoomLevels } from "../lib/zoom";
 import { Dialog } from "./Dialog";
 import {
   modelList,
@@ -9,7 +10,7 @@ import {
   downloadJson,
   listMeetings,
 } from "../lib/storage";
-import type { Preferences } from "../lib/types";
+import type { CalendarEvent, Preferences } from "../lib/types";
 import { TranscriptionSettings } from "./TranscriptionSettings";
 import { AgentSettings } from "./AgentSettings";
 import { BackupSettings } from "./BackupSettings";
@@ -20,6 +21,11 @@ import {
   templateInstructions,
 } from "../lib/templates";
 export function Settings({
+  calendarEvents,
+  reminderError,
+  onPreviewReminder,
+  zoom,
+  onZoom,
   preferences,
   onSave,
   onClose,
@@ -29,6 +35,11 @@ export function Settings({
   beforeImport,
   onImported,
 }: {
+  calendarEvents: CalendarEvent[];
+  reminderError: string | null;
+  onPreviewReminder: () => void;
+  zoom: number;
+  onZoom: (value: number) => void;
   beforeImport: () => Promise<void>;
   onImported: () => Promise<void>;
   updates: (settingsPending: boolean) => ReactNode;
@@ -82,6 +93,25 @@ export function Settings({
       )}
       <fieldset className="settings-fields" disabled={installing || importing}>
         <section className="settings-section">
+          <h3>Appearance</h3>
+          <label>
+            Zoom
+            <select
+              value={zoom}
+              onChange={(e) => onZoom(Number(e.target.value))}
+            >
+              {zoomLevels.map((level) => (
+                <option key={level} value={level}>
+                  {level}%
+                </option>
+              ))}
+            </select>
+          </label>
+          <small>
+            ⌘+ to zoom in · ⌘− to zoom out · ⌘0 to reset. Saved on this Mac.
+          </small>
+        </section>
+        <section className="settings-section">
           <h3>Calendar</h3>
           <p>Use your Mac’s calendars, including Google Calendar.</p>
           <button
@@ -98,6 +128,149 @@ export function Settings({
             Connect calendar
             <ArrowSquareOut size={16} />
           </button>
+          <label className="agent-option">
+            <input
+              type="checkbox"
+              checked={draft.reminderEnabled}
+              disabled={!native || !draft.calendarEnabled || busy}
+              onChange={(e) => {
+                const enabled = e.target.checked;
+                if (!enabled) {
+                  setDraft({ ...draft, reminderEnabled: false });
+                  return;
+                }
+                void act(async () => {
+                  const allowed = await invoke<boolean>(
+                    "request_reminder_permission",
+                  );
+                  if (!allowed)
+                    throw new Error(
+                      "Allow Patter in System Settings → Notifications, then try again.",
+                    );
+                  setDraft((value) => ({ ...value, reminderEnabled: true }));
+                });
+              }}
+            />
+            Meeting reminders
+          </label>
+          <small>
+            While Patter is open, including in the background. Save to apply
+            changes.
+          </small>
+          {draft.reminderEnabled && (
+            <>
+              <label>
+                Remind me
+                <select
+                  value={draft.reminderMinutes}
+                  onChange={(e) =>
+                    setDraft({
+                      ...draft,
+                      reminderMinutes: Number(e.target.value),
+                    })
+                  }
+                >
+                  {[0, 1, 2, 5, 10, 15, 30].map((minutes) => (
+                    <option key={minutes} value={minutes}>
+                      {minutes ? `${minutes} min before` : "At start time"}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="agent-option">
+                <input
+                  type="checkbox"
+                  checked={draft.reminderSound}
+                  onChange={(e) =>
+                    setDraft({ ...draft, reminderSound: e.target.checked })
+                  }
+                />
+                Play sound
+              </label>
+              <label className="agent-option">
+                <input
+                  type="checkbox"
+                  checked={draft.reminderShowTitle}
+                  onChange={(e) =>
+                    setDraft({ ...draft, reminderShowTitle: e.target.checked })
+                  }
+                />
+                Show meeting titles in notifications
+              </label>
+              <details>
+                <summary>Calendars</summary>
+                <small>
+                  All calendars unless you select specific ones. All-day and
+                  declined events are skipped.
+                </small>
+                {[
+                  ...new Map(
+                    calendarEvents
+                      .filter((event) => event.calendarId)
+                      .map((event) => [event.calendarId!, event.calendar]),
+                  ).entries(),
+                ].map(([id, name]) => (
+                  <label className="agent-option" key={id}>
+                    <input
+                      type="checkbox"
+                      checked={draft.reminderCalendars.includes(id)}
+                      onChange={(e) =>
+                        setDraft({
+                          ...draft,
+                          reminderCalendars: e.target.checked
+                            ? [...draft.reminderCalendars, id]
+                            : draft.reminderCalendars.filter(
+                                (item) => item !== id,
+                              ),
+                        })
+                      }
+                    />
+                    {name}
+                  </label>
+                ))}
+                {!!draft.reminderCalendars.length && (
+                  <button
+                    className="text-button"
+                    onClick={() =>
+                      setDraft({ ...draft, reminderCalendars: [] })
+                    }
+                  >
+                    Use all calendars
+                  </button>
+                )}
+              </details>
+            </>
+          )}
+          <button
+            className="text-button"
+            disabled={busy}
+            onClick={() => {
+              if (!native) {
+                onPreviewReminder();
+                return;
+              }
+              void act(async () => {
+                const allowed = await invoke<boolean>(
+                  "request_reminder_permission",
+                );
+                if (!allowed)
+                  throw new Error(
+                    "Allow Patter in System Settings → Notifications.",
+                  );
+                await invoke("test_reminder");
+                setMessage(
+                  "Test sent. Check macOS notification settings or Focus if it does not appear.",
+                );
+              });
+            }}
+          >
+            {native ? "Test notification" : "Preview reminder"}
+          </button>
+          {reminderError && (
+            <p className="form-message" role="status">
+              {reminderError}
+            </p>
+          )}
         </section>
         <section className="settings-section">
           <h3>Summaries</h3>

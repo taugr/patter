@@ -28,7 +28,7 @@
 
 A personal, local-first meeting notebook for Apple Silicon Macs running macOS 15 or later. Built with Tauri 2, Rust, SQLite, Swift audio/calendar and Parakeet helpers, and React + Vite. No hosted backend, account system, analytics, Electron runtime, or bundled model weights.
 
-Patter is in active personal development. **v0.4.0** adds Parakeet model downloads, Anarlog import and Google Drive backup. Native audio capture, Calendar permissions and summary-model inference still need a supervised setup and reliability pass before relying on Patter for important meetings.
+Patter is in active personal development. **v0.6.0** adds interface zoom and configurable meeting reminders, alongside local MCP access, Parakeet model downloads, Anarlog import and Google Drive backup. Native audio capture, Calendar permissions and summary-model inference still need a supervised setup and reliability pass before relying on Patter for important meetings.
 
 ## Install and updates
 
@@ -63,7 +63,7 @@ Application: `src-tauri/target/release/bundle/macos/Patter.app`. Model weights a
 
 ## First setup
 
-**Calendar:** Add the Google account in macOS Internet Accounts and enable Calendars. Confirm the events appear in Apple Calendar, then use Patter Settings → Calendar → Connect calendar and grant access. macOS requires full calendar access for EventKit reads; Patter's implementation only reads. Events refresh on launch or when connecting again. Direct Google OAuth, calendar selection and background refresh are future work.
+**Calendar:** Add the Google account in macOS Internet Accounts and enable Calendars. Confirm the events appear in Apple Calendar, then use Patter Settings → Calendar → Connect calendar and grant access. macOS requires full calendar access for EventKit reads; Patter's implementation only reads. Events refresh every minute while Patter runs. Direct Google OAuth remains future work.
 
 **Summaries:** Start a model in LM Studio's local server, then use `http://127.0.0.1:1234/v1`. For an existing Ollama server use `http://127.0.0.1:11434/v1`. Choose Find models, enter/select a model, and Save. The endpoint/model are preferences, not credentials. No cloud fallback is implemented.
 
@@ -160,3 +160,15 @@ For custom paths and development sockets, use the command and complete arguments
 Read access covers the whole library, including archives and history. Cloud agents may send returned text to their model provider; Patter’s own processing stays local. Edits preserve history and reject stale revisions. Agents cannot delete data or start recording.
 
 See the [full setup guide](docs/agent-access.md) for example configuration, permissions, troubleshooting and developer checks.
+
+## Zoom and meeting reminders
+
+Available from v0.6.0. Meeting reminders are off until you enable them.
+
+- **Zoom:** use **View → Zoom In / Zoom Out / Actual Size**, **⌘+ / ⌘− / ⌘0**, or **Settings → Appearance → Zoom**. Levels range from 75% to 200% and are remembered on this Mac, separately from library backups.
+- **Reminders:** connect your Mac calendar, then enable **Settings → Calendar → Meeting reminders** and allow macOS notifications. Choose the lead time (at start, or 1–30 minutes before), sound, meeting-title visibility and calendars, then **Save**. No calendar selection means all connected calendars.
+- Patter refreshes calendar events every minute and checks reminders every ten seconds while running, including in the background. Keep Patter open; reminders do not run after quitting or while your Mac sleeps. After wake, upcoming meetings or meetings that started less than a minute ago can still remind you. All-day, cancelled and declined events are skipped.
+- A reminder offers **Record…**, **Open notes** and **Dismiss** in Patter. The macOS **Record…** action opens a confirmation in Patter. Recording starts only after **Start recording**, and uses the meeting’s existing conversation when available. Finish any active recording or task first.
+- Use **Test notification** to check macOS delivery without calendar access. Test reminders use a synthetic meeting and never start recording automatically. If banners are hidden, check macOS **System Settings → Notifications → Patter** and Focus. The browser preview has **Preview reminder** for inspecting the flow.
+
+Each meeting occurrence is remembered to avoid repeated reminders across restarts. Rescheduled occurrences can notify again. Configuration is included in normal library backups, but macOS notification permission must be granted separately on each Mac. macOS controls final banner and sound delivery.

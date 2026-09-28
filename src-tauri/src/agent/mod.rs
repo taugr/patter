@@ -1,7 +1,7 @@
 //! Local agent policy and tools. All mutation occurs in the running app.
 #[cfg(test)]
 mod tests;
-mod transport;
+pub(crate) mod transport;
 use crate::{
     activity::Activity,
     services,
