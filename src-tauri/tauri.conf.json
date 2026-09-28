@@ -38,6 +38,7 @@
     ],
     "resources": {
       "resources/patter-native": "resources/patter-native",
+      "resources/patter-parakeet": "resources/patter-parakeet",
       "../THIRD_PARTY_NOTICES.txt": "THIRD_PARTY_NOTICES.txt"
     },
     "macOS": {

@@ -301,7 +301,7 @@ export function MeetingPane({
             <h2>No transcript yet</h2>
             <p>
               {meeting.recordings.length
-                ? "Transcribe your recording with your local Whisper model."
+                ? "Transcribe your recording with your selected local model."
                 : "Record a conversation or import audio to create a transcript."}
             </p>
             <button

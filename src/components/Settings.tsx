@@ -1,11 +1,6 @@
 import { type ReactNode, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import {
-  FolderOpen,
-  Check,
-  DownloadSimple,
-  ArrowSquareOut,
-} from "@phosphor-icons/react";
+import { Check, DownloadSimple, ArrowSquareOut } from "@phosphor-icons/react";
 import { Dialog } from "./Dialog";
 import {
   modelList,
@@ -15,6 +10,9 @@ import {
   listMeetings,
 } from "../lib/storage";
 import type { Preferences } from "../lib/types";
+import { TranscriptionSettings } from "./TranscriptionSettings";
+import { BackupSettings } from "./BackupSettings";
+import { AnarlogImport } from "./AnarlogImport";
 import {
   instructionLimit,
   summaryTemplate,
@@ -28,7 +26,11 @@ export function Settings({
   onConnectCalendar,
   updates,
   installing,
+  beforeImport,
+  onImported,
 }: {
+  beforeImport: () => Promise<void>;
+  onImported: () => Promise<void>;
   updates: (settingsPending: boolean) => ReactNode;
   installing: boolean;
   preferences: Preferences;
@@ -40,6 +42,9 @@ export function Settings({
   const [models, setModels] = useState<string[]>([]);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [backingUp, setBackingUp] = useState(false);
   async function act(fn: () => Promise<void>) {
     setBusy(true);
     setMessage("");
@@ -57,9 +62,20 @@ export function Settings({
     setMessage("Settings saved.");
   }
   return (
-    <Dialog title="Settings" onClose={onClose}>
-      {updates(busy || JSON.stringify(draft) !== JSON.stringify(preferences))}
-      <fieldset className="settings-fields" disabled={installing}>
+    <Dialog
+      title="Settings"
+      onClose={() => {
+        if (!importing && !backingUp) onClose();
+      }}
+    >
+      {updates(
+        busy ||
+          importing ||
+          backingUp ||
+          downloading ||
+          JSON.stringify(draft) !== JSON.stringify(preferences),
+      )}
+      <fieldset className="settings-fields" disabled={installing || importing}>
         <section className="settings-section">
           <h3>Calendar</h3>
           <p>Use calendars connected to your Mac, including Google Calendar.</p>
@@ -185,32 +201,11 @@ export function Settings({
             decisions and next steps layout.
           </small>
         </section>
-        <section className="settings-section">
-          <h3>Transcription</h3>
-          <p>Choose a local Whisper model (.bin).</p>
-          <button
-            className="secondary"
-            disabled={busy || !native}
-            onClick={() =>
-              act(async () => {
-                const { open } = await import("@tauri-apps/plugin-dialog");
-                const path = await open({
-                  filters: [{ name: "Whisper model", extensions: ["bin"] }],
-                });
-                if (typeof path === "string")
-                  setDraft({ ...draft, whisperModel: path });
-              })
-            }
-          >
-            <FolderOpen size={18} />
-            {draft.whisperModel ? "Change model" : "Choose model file"}
-          </button>
-          {draft.whisperModel && (
-            <small className="file-path">
-              {draft.whisperModel.split("/").at(-1)}
-            </small>
-          )}
-        </section>
+        <TranscriptionSettings
+          draft={draft}
+          onChange={setDraft}
+          onBusy={setDownloading}
+        />
         <section className="settings-section">
           <h3>Library</h3>
           <p>
@@ -219,7 +214,7 @@ export function Settings({
           </p>
           <button
             className="secondary"
-            disabled={busy}
+            disabled={busy || importing || backingUp}
             onClick={() =>
               act(async () => {
                 if (native) {
@@ -247,16 +242,38 @@ export function Settings({
             {native ? "Back up library" : "Export preview notes"}
           </button>
         </section>
+        <BackupSettings
+          disabled={busy || installing || importing}
+          beforeBackup={async () => {
+            await beforeImport();
+            await save();
+          }}
+          onBusy={setBackingUp}
+        />
+        <AnarlogImport
+          disabled={busy || installing || backingUp}
+          onBusy={setImporting}
+          beforeImport={beforeImport}
+          onImported={onImported}
+        />
         {message && (
           <p className="form-message" role="status">
             {message}
           </p>
         )}
         <div className="dialog-actions">
-          <button className="text-button" onClick={onClose}>
+          <button
+            className="text-button"
+            disabled={importing || backingUp}
+            onClick={onClose}
+          >
             Close
           </button>
-          <button className="primary" disabled={busy} onClick={() => act(save)}>
+          <button
+            className="primary"
+            disabled={busy || importing || backingUp}
+            onClick={() => act(save)}
+          >
             <Check size={18} />
             Save
           </button>

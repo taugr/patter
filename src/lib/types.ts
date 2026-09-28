@@ -54,6 +54,7 @@ export interface Preferences {
   endpoint: string;
   model: string;
   whisperModel: string;
+  transcriptionModel: string;
   calendarEnabled: boolean;
   summaryTemplate: string;
   templateInstructions: Record<string, string>;
@@ -62,6 +63,7 @@ export const defaultPreferences: Preferences = {
   endpoint: "http://127.0.0.1:1234/v1",
   model: "",
   whisperModel: "",
+  transcriptionModel: "parakeet-v3",
   calendarEnabled: false,
   summaryTemplate: "general",
   templateInstructions: {},

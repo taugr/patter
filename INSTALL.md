@@ -42,3 +42,22 @@ If the key is lost, existing clients cannot trust a new signing identity automat
 ## Validation limits
 
 Automated gates cover frontend persistence/search, native activity exclusion, immutable versions/audio references, schema rejection, failed migration rollback and database backup restoration. Signature/packaging checks validate release assets before publication. Real capture, Calendar access, interrupted downloads, actual disk exhaustion, and permissions across two physical Macs remain separate verification tasks.
+
+## Import an Anarlog 1.0.27 library
+
+This feature is currently in the local development build, pending the next release.
+
+1. On the old Mac, open Anarlog's **Settings → Storage** and locate **Content**. Its default is `~/Library/Application Support/hyprnote/`; a custom location may differ.
+2. Quit Anarlog so its files stop changing. Copy the entire Content folder (including `sessions/` and its nested folders) to the new Mac using AirDrop or an external drive. Keep the original.
+3. In Patter, open **Settings → Import from Anarlog → Choose Anarlog folder** and select the copied Content folder, or its `sessions/` folder.
+4. Review the conversation list and import notes, then choose **Import conversations**. Large libraries take longer because every file is checked and copied.
+
+The importer targets the [Anarlog desktop_v1.0.27 session format](https://github.com/fastrepl/anarlog/tree/desktop_v1.0.27/apps/desktop/src/store/tinybase/persister/session): `_meta.json`, `_memo.md`, summary Markdown files, `transcript.json`, and retained `audio.mp3`, `audio.wav`, or `audio.ogg`. It includes nested meeting folders. It does not support a newer SQLite-only library or a Markdown-only export.
+
+Titles, creation dates, note/summary text and transcript timings are imported. Explicit word speaker labels are retained; otherwise the original microphone/computer channel is used. Original JSON, Markdown, attachments and other files in each session folder are copied unchanged to `recordings/<conversation-id>/anarlog-source/`, so they are also included in Patter's full library backup. Rich formatting, participant mappings, tags and template metadata remain available in those original files; custom templates, contacts, chat history and application settings are not converted into Patter features. No recordings that Anarlog already deleted can be recovered.
+
+Import never writes to the source. Patter snapshots its database first, verifies copied files and commits the batch together. Unchanged repeat imports are skipped even after moving the copied folder. Changed source sessions become separate conversations, preserving edits made in Patter. Invalid files or links stop the import with an error. If copying fails, any copied files remain in Patter's recordings folder, but no partial batch appears in the library; retry is safe. Nothing is uploaded.
+
+## Google Drive backups
+
+The local development build includes **Settings → Google Drive backup** for manual/nightly backups and verified restore on another Mac. It requires one-time Google Desktop OAuth setup and your sign-in. Follow the [setup guide](docs/google-drive-backup.md). This creates Patter's own launchd job only when you enable nightly backups; existing Anarlog backup jobs are untouched. Real Drive backup/restore and LaunchAgent catch-up with the app closed have passed. After an ad-hoc app update, use **Reconnect Google Drive** if prompted, select the original Google setup JSON and sign in again. The verified recovery path preserves your backup history and schedule and resumes due backups. Reconnection is required because each changed ad-hoc signature has a different Keychain identity.

@@ -104,11 +104,15 @@ export async function history(id: string): Promise<Meeting[]> {
         .sort((a, b) => b.revision - a.revision);
 }
 export async function getPreferences(): Promise<Preferences> {
+  const saved = native
+    ? await invoke<Partial<Preferences>>("get_preferences")
+    : await read<Partial<Preferences> | undefined>("settings", "preferences");
   return {
     ...defaultPreferences,
-    ...(native
-      ? await invoke<Preferences>("get_preferences")
-      : await read<Preferences>("settings", "preferences")),
+    ...saved,
+    transcriptionModel:
+      saved?.transcriptionModel ??
+      (saved?.whisperModel ? "whisper-file" : "parakeet-v3"),
   };
 }
 export async function setPreferences(preferences: Preferences) {

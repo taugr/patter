@@ -6,6 +6,9 @@ src-tauri/target/
 .env*
 
 src-tauri/resources/patter-native
+src-tauri/resources/patter-parakeet
+src-tauri/resources/FluidAudio_FluidAudio.bundle/
+src-tauri/parakeet/.build/
 .secrets/
 release-artifacts/
 *.key
@@ -21,3 +24,7 @@ design/
 design-qa.md
 PATTER_PLAN.md
 RELEASE_PLAN.md
+
+# Personal Google Desktop OAuth setup files stay outside source control.
+client_secret*.json
+credentials.json

@@ -8,6 +8,7 @@ import {
   ArrowLeft,
   Plus,
 } from "@phosphor-icons/react";
+import { BackupHealth } from "./BackupHealth";
 import type { CalendarEvent, Meeting } from "../lib/types";
 import { native } from "../lib/storage";
 export function Sidebar({
@@ -174,6 +175,7 @@ export function Sidebar({
           <GearSix size={23} />
           Settings
         </button>
+        <BackupHealth onOpen={onSettings} />
         {!native && (
           <span className="preview-label">
             Browser preview · sample library

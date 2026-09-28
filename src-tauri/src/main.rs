@@ -1,8 +1,12 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 mod activity;
+mod anarlog;
+mod backup;
 mod models;
 mod store;
 mod templates;
+mod transcription;
+mod transcription_models;
 mod updates;
 use serde_json::{json, Value};
 use std::{
@@ -400,6 +404,7 @@ async fn stop_recording(lib: State<'_, Library>, runtime: State<'_, Runtime>) ->
 }
 #[tauri::command]
 async fn transcribe(
+    app: tauri::AppHandle,
     lib: State<'_, Library>,
     activity: State<'_, activity::Activity>,
     id: String,
@@ -411,26 +416,47 @@ async fn transcribe(
         (store::load(&db, &id)?, store::preferences(&db)?)
     };
     let root = lib.root.clone();
-    let mid = id.clone();
-    let segments=tauri::async_runtime::spawn_blocking(move||->Result<Vec<Value>>{
- let _job = job;
- let model=prefs["whisperModel"].as_str().filter(|p|Path::new(p).is_file()).ok_or("Choose a local Whisper .bin model in Settings first.")?;
- let context=whisper_rs::WhisperContext::new_with_params(model,whisper_rs::WhisperContextParameters::default()).map_err(|e|format!("Whisper could not load the selected model: {e}"))?;
- let recordings=meeting["recordings"].as_array().ok_or("No recordings")?;if recordings.is_empty(){return Err("Import or record some audio first.".into())}let mut segments=Vec::new();
- let working=root.join("processing").join(uuid::Uuid::new_v4().to_string());std::fs::create_dir_all(&working).map_err(|e|e.to_string())?;
- for (i,r) in recordings.iter().enumerate(){let input=PathBuf::from(r["path"].as_str().ok_or("Missing recording path")?);let canonical=input.canonicalize().map_err(|e|e.to_string())?;if !canonical.starts_with(root.join("recordings").join(&mid).canonicalize().map_err(|e|e.to_string())?){return Err("Recording path is outside this conversation.".into())}
- let wave=working.join(format!("{i}.wav"));let result=Command::new("/usr/bin/afconvert").arg(&input).arg(&wave).args(["-f","WAVE","-d","LEI16@16000","-c","1"]).output().map_err(|e|e.to_string())?;if !result.status.success(){return Err(format!("Could not prepare audio: {}",String::from_utf8_lossy(&result.stderr)))}
- let mut reader=hound::WavReader::open(&wave).map_err(|e|e.to_string())?;let samples=reader.samples::<i16>().map(|s|s.map(|x|x as f32/32768.0)).collect::<std::result::Result<Vec<_>,_>>().map_err(|e|e.to_string())?;
- let mut state=context.create_state().map_err(|e|e.to_string())?;let mut params=whisper_rs::FullParams::new(whisper_rs::SamplingStrategy::Greedy{best_of:1});params.set_language(None);params.set_translate(false);params.set_print_progress(false);params.set_print_realtime(false);params.set_print_timestamps(false);params.set_n_threads(4);
- state.full(params,&samples).map_err(|e|e.to_string())?;
- let offset=r["offset"].as_f64().unwrap_or(0.0);for s in state.as_iter(){segments.push(json!({"start":offset+s.start_timestamp() as f64/100.0,"text":s.to_str_lossy().map_err(|e|e.to_string())?.trim(),"speaker":r["track"].as_str().unwrap_or("Audio")}));}
- }
- segments.sort_by(|a,b|a["start"].as_f64().partial_cmp(&b["start"].as_f64()).unwrap_or(std::cmp::Ordering::Equal));Ok(segments)
- }).await.map_err(|e|e.to_string())??;
+    let parakeet = if cfg!(debug_assertions) {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources/patter-parakeet")
+    } else {
+        app.path()
+            .resource_dir()
+            .map_err(|e| e.to_string())?
+            .join("resources/patter-parakeet")
+    };
+    let segments = tauri::async_runtime::spawn_blocking(move || {
+        let _job = job;
+        transcription::transcribe(&root, &meeting, &prefs, &parakeet)
+    })
+    .await
+    .map_err(|e| e.to_string())??;
     let mut db = lock_db(&lib)?;
     let mut latest = store::load(&db, &id)?;
     latest["transcript"] = json!(segments);
     store::save(&mut db, latest)
+}
+#[tauri::command]
+fn transcription_models(
+    lib: State<'_, Library>,
+    downloads: State<'_, transcription_models::Downloads>,
+) -> Result<Value> {
+    let models: Vec<Value> = transcription_models::catalog().iter().map(|m| json!({"id":m.id,"name":m.name,"description":m.description,"size":m.size(),"installed":m.installed(&lib.root),"license":m.license})).collect();
+    Ok(json!({"models":models,"download":downloads.progress()?}))
+}
+#[tauri::command]
+async fn download_transcription_model(
+    lib: State<'_, Library>,
+    activity: State<'_, activity::Activity>,
+    downloads: State<'_, transcription_models::Downloads>,
+    id: String,
+) -> Result<()> {
+    let _job = activity.job()?;
+    let model = transcription_models::model(&id)?;
+    transcription_models::download(&lib.root, &model, &downloads).await
+}
+#[tauri::command]
+fn cancel_model_download(downloads: State<'_, transcription_models::Downloads>) {
+    downloads.cancel();
 }
 fn copy_tree(source: &Path, dest: &Path) -> Result<()> {
     std::fs::create_dir_all(dest).map_err(|e| e.to_string())?;
@@ -444,6 +470,35 @@ fn copy_tree(source: &Path, dest: &Path) -> Result<()> {
         }
     }
     Ok(())
+}
+#[tauri::command]
+async fn preview_anarlog(app: tauri::AppHandle, path: String) -> Result<anarlog::Preview> {
+    let job = app.state::<activity::Activity>().job()?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let _job = job;
+        let lib = app.state::<Library>();
+        let db = lock_db(&lib)?;
+        anarlog::preview(Path::new(&path), &db)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+#[tauri::command]
+async fn import_anarlog(app: tauri::AppHandle, path: String, fingerprint: String) -> Result<Value> {
+    let job = app.state::<activity::Activity>().exclusive()?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let _job = job;
+        let lib = app.state::<Library>();
+        let source = Path::new(&path).canonicalize().map_err(|e| e.to_string())?;
+        let root = lib.root.canonicalize().map_err(|e| e.to_string())?;
+        if source.starts_with(&root) || root.starts_with(&source) {
+            return Err("Choose the copied Anarlog folder outside your Patter library.".into());
+        }
+        let mut db = lock_db(&lib)?;
+        anarlog::import(&source, &root, &mut db, &fingerprint)
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 #[tauri::command]
 fn backup_library(
@@ -499,6 +554,17 @@ fn finish_quit(
     Ok(())
 }
 fn main() {
+    if std::env::args().any(|a| a == "--backup-worker") {
+        // Headless execution must never initialize a webview or steal focus.
+        std::process::exit(if backup::worker().is_ok() { 0 } else { 1 });
+    }
+    // Stable lock survives replacing the library directory during restore.
+    let backup_root = backup::stable_root().expect("Patter home folder unavailable");
+    let _app_lock = backup::process_lock(&backup_root, "app", true).ok();
+    if _app_lock.is_some() {
+        backup::apply_restore(&backup_root)
+            .expect("Patter restore needs attention; libraries have been preserved");
+    }
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _, _| {
             if let Some(window) = app.get_webview_window("main") {
@@ -508,6 +574,7 @@ fn main() {
         }))
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(activity::Activity::default())
+        .manage(transcription_models::Downloads::default())
         .manage(updates::Pending::default())
         .plugin(tauri_plugin_dialog::init())
         .manage(Runtime {
@@ -515,6 +582,13 @@ fn main() {
         })
         .setup(|app| {
             let root = app.path().app_data_dir()?;
+            app.state::<activity::Activity>()
+                .set_root(&root)
+                .map_err(std::io::Error::other)?;
+            let _startup = app
+                .state::<activity::Activity>()
+                .job()
+                .map_err(std::io::Error::other)?;
             let library = store::open(&root).map_err(std::io::Error::other)?;
             // Recover surviving capture chunks on launch. This never deletes original audio.
             let ids = {
@@ -564,7 +638,21 @@ fn main() {
             stop_recording,
             recording_status,
             transcribe,
+            transcription_models,
+            download_transcription_model,
+            cancel_model_download,
             backup_library,
+            preview_anarlog,
+            import_anarlog,
+            backup::backup_status,
+            backup::backup_connect,
+            backup::backup_now,
+            backup::backup_configure,
+            backup::backup_disconnect,
+            backup::backup_open_folder,
+            backup::backup_list_snapshots,
+            backup::backup_prepare_restore,
+            backup::backup_restart,
             finish_quit,
             updates::check_update,
             updates::install_update

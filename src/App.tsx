@@ -621,6 +621,12 @@ export default function App() {
       )}
       {modal === "settings" && (
         <Settings
+          beforeImport={flush}
+          onImported={async () => {
+            const items = await storage.listMeetings();
+            setMeetings(items);
+            if (!selectedId) setSelectedId(items.find((m) => !m.archived)?.id ?? "");
+          }}
           preferences={preferences}
           installing={installingUpdate}
           updates={(settingsPending) => (

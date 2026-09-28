@@ -21,6 +21,13 @@ describe("summary templates", () => {
     } as Preferences);
     const old = await getPreferences();
     expect(effectiveTemplate(newMeeting(), old).id).toBe("general");
+    expect(old.transcriptionModel).toBe("parakeet-v3");
+    await setPreferences({
+      ...old,
+      whisperModel: "/legacy.bin",
+      transcriptionModel: undefined,
+    } as unknown as Preferences);
+    expect((await getPreferences()).transcriptionModel).toBe("whisper-file");
     await setPreferences({
       ...old,
       summaryTemplate: "interview",

@@ -7,12 +7,18 @@ pub struct Activity(Arc<Mutex<Status>>);
 struct Status {
     jobs: usize,
     exclusive: bool,
+    root: Option<std::path::PathBuf>,
 }
 pub struct Guard {
     activity: Activity,
     exclusive: bool,
+    _file: Option<std::fs::File>,
 }
 impl Activity {
+    pub fn set_root(&self, root: &std::path::Path) -> Result<()> {
+        self.0.lock().map_err(|_| "Activity lock failed")?.root = Some(root.to_owned());
+        Ok(())
+    }
     pub fn job(&self) -> Result<Guard> {
         self.enter(false)
     }
@@ -23,9 +29,15 @@ impl Activity {
         let mut state = self.0.lock().map_err(|_| "Activity lock failed")?;
         if state.exclusive || (exclusive && state.jobs > 0) {
             return Err(
-                "Finish recording, processing, or saving before updating or quitting.".into(),
+                "Finish recording, processing, downloading, or saving before updating or quitting."
+                    .into(),
             );
         }
+        let file = state
+            .root
+            .as_ref()
+            .map(|root| crate::backup::process_lock(root, "activity", exclusive))
+            .transpose()?;
         if exclusive {
             state.exclusive = true;
         } else {
@@ -34,6 +46,7 @@ impl Activity {
         Ok(Guard {
             activity: self.clone(),
             exclusive,
+            _file: file,
         })
     }
 }
