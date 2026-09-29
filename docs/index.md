@@ -27,4 +27,10 @@ features:
 
 Patter is a personal preview for **Apple Silicon Macs running macOS 15 or later**. It is in active development. Test recording and permissions with a short disposable conversation before relying on it for an important meeting.
 
+## Recent additions
+
+**v0.6.6** adds [permission setup on launch](guide/permissions.md#set-up-access-on-launch). Patter lists missing access and offers Allow, Open settings or Later before you record.
+
+The guide also covers [meeting reminders and Google Meet/Zoom links](guide/calendar.md), [zoom shortcuts](guide/using-patter.md#zoom-and-keyboard-shortcuts), [model downloads and summary templates](guide/models.md), and [moving an Anarlog library](guide/library.md#move-an-anarlog-1-0-27-library). Settings now groups setup into five tabs with expandable help. See the [release history](https://github.com/taugr/patter/releases) for version details.
+
 [Download the latest Mac release](https://github.com/taugr/patter/releases/latest) · [Privacy policy](https://patter.labs.tau.gr/privacy.html) · [Project on GitHub](https://github.com/taugr/patter)

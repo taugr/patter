@@ -1,39 +1,45 @@
 # Use Patter
 
-Settings has five tabs: **General**, **Calendar**, **Models**, **Library**, and **Agents**. Switching tabs keeps your edits. Use **Save changes** for model, template and reminder preferences; zoom and agent permissions apply immediately. Setup instructions are behind expandable help links.
+Settings has five tabs: **General**, **Calendar**, **Models**, **Library**, and **Agents**. Switching tabs keeps your edits. Use **Save changes** for model, template and reminder preferences; zoom and agent permissions apply immediately. Connection and backup messages stay beside the relevant controls, and setup help is expandable.
 
 ## Notes and history
 
 Create a conversation, edit its title and notes, mark actions complete, and search your library. Saved versions remain available in history; restoring an earlier version creates a new version. Archive hides a conversation from the active list and can be undone.
 
+Use **Export conversation** for a JSON copy of a conversation and its saved history. Use a [library backup](library.md#make-an-independent-backup) to include the original audio.
+
 ## Recordings and transcription
 
-On launch, the packaged app checks microphone and computer-audio access and offers **Set up access** if anything is missing. Calendar and notification access are included only when those features are enabled. Choose **Allow** for a new request or **Open settings** if access was denied. Returning from macOS Settings refreshes the check; macOS may require you to reopen Patter. **Later** dismisses setup until the next launch. Checking access never starts a recording or creates a conversation.
+On launch, the packaged app offers **Set up access** when recording permissions are missing. You can grant access, open macOS settings or choose Later. The check never starts recording. See [permissions and recovery](permissions.md).
 
-Import an audio file into a conversation, or choose **Record → Record microphone & computer audio**. macOS can ask for microphone and screen/system-audio capture access. Patter stores audio chunks and imported originals in its local library. Computer audio and microphone labels identify tracks; they are not speaker diarization.
+The sidebar's **Record → Record microphone & computer audio** creates a new conversation. Use **Stop** when finished; Patter saves the recording. It retains audio chunks and imported originals in its local library; computer-audio capture does not save screen video.
 
-To set up permissions before recording, open **Settings → General → Recording → Enable recording access** in the packaged app. This requests access without creating a conversation or capturing audio. macOS lists Patter after it requests access. Allow Microphone access, then Screen & System Audio Recording when prompted. If access was denied, use the shortcuts under **Settings → General → Recording → Permissions help**, allow Patter, then quit and reopen it. No screen video is saved. Release checks verify the audio entitlement on both the app and recording helper, plus their consent descriptions.
+**Import audio** adds a file to the currently selected conversation. Choose and download a model under **Settings → Models → Transcription**, then use **Transcript → Transcribe recording**. [Local models and templates](models.md) covers Parakeet v3, Whisper, download verification and repair.
 
-In **Settings → Models → Transcription**, choose Parakeet v3, Whisper Base, or Whisper Small, select **Download**, then **Save changes**. Downloads come from Hugging Face and are verified before use. Once installed, transcription runs offline. You can also select an existing compatible whisper.cpp GGML `.bin` file. Open a conversation's **Transcript** tab and choose **Transcribe recording**.
-
-Transcription on a short synthetic sample has been verified. Long calls, live capture, and model quality across accents and devices need further checks. Try a short disposable recording before an important meeting.
+Test a short disposable recording and playback before an important meeting. Live capture, long sessions and accuracy across devices still need supervised checks.
 
 ## Summaries and calendar
 
-Summaries require a local OpenAI-compatible model server. In **Settings → Models → Summaries**, use `http://127.0.0.1:1234/v1` for LM Studio's local server or `http://127.0.0.1:11434/v1` for an existing Ollama server, find a model, and save it. Patter has no cloud fallback. In **Settings → Models → Templates**, choose a default or edit instructions; a conversation can override that choice. Past generated versions retain their template and model details.
+Connect a local OpenAI-compatible model server under **Settings → Models → Summaries**, then use **Summary → Create summary**. Choose default template guidance in Settings or expand **Template** in a conversation to override it. [Summary setup](models.md#connect-a-summary-model) explains local server addresses, templates and preserved generated versions.
 
-To connect events, add your account in macOS **Internet Accounts**, enable Calendars, and check that events appear in Apple Calendar. Then use **Settings → Calendar → Connect calendar** and grant full Calendar access. Patter reads events and can create or reopen a linked note. It does not edit calendar events.
+Connect calendars already present in Apple Calendar, including a Google account added to macOS Internet Accounts. Upcoming events can open notes, and Google Meet or Zoom events can offer **Join**. Configure reminder timing, sound, title visibility and calendars under **Settings → Calendar**. Patter must remain open to send reminders. [Calendar and meetings](calendar.md) explains linking, joining and recording from reminders.
 
-Use v0.6.2 or later for the Calendar entitlement fix. Settings shows permission status and keeps connection errors beside the button. If Patter is missing from macOS Calendar permissions, click **Connect calendar** in the packaged app first; macOS lists apps after they request access. If access is denied, use **Calendar permissions** to enable Patter, then reconnect. **Check again** refreshes the status, and **Connection help** includes permission shortcuts and Google account setup. The same dialog links to Notification, Microphone and Screen & System Audio settings. Calendar consent has been confirmed in a packaged local test build.
+## Zoom and keyboard shortcuts
 
-**Join meeting** opens a Google Meet or Zoom link in your default browser, which can hand Zoom links to the Zoom app. Look for **Join** under Upcoming, or **Join meeting** in linked notes and reminders. Patter checks the event’s URL, location and invitation notes. Zoom passcodes in the link are retained. Joining does not start recording. Events without a recognised link have no Join button; new linked notes keep the link for later use.
+Choose **Settings → General → Zoom**, use the **View** menu, or press:
 
-Meeting reminders are optional. After connecting Calendar, enable them in **Settings → Calendar**, choose the lead time and calendars, then save. Patter must remain open for reminders to run. A reminder can open notes or offer a recording confirmation; it never starts recording automatically. Use **Test notification** to check macOS delivery.
+| Shortcut | Action |
+| --- | --- |
+| ⌘+ (or ⌘=) | Zoom in |
+| ⌘− | Zoom out |
+| ⌘0 | Reset to 100% |
+
+Patter supports 75% to 200% and remembers zoom on each Mac. It applies immediately and is separate from library backup preferences. When a Settings tab has keyboard focus, use Left/Right arrows to switch tabs, or Home/End to select the first or last tab.
 
 ## Move from Anarlog
 
-If you have an Anarlog 1.0.27 library, make a copy of its Content folder, then use **Settings → Library → Import from Anarlog** to preview and import it. Patter keeps source files and skips unchanged repeat imports. Read the [format and transfer limits](https://github.com/taugr/patter/blob/main/INSTALL.md#import-an-anarlog-1027-library) before moving a large library.
+Copy your Anarlog 1.0.27 Content folder and use **Settings → Library → Import from Anarlog** to preview and import it. Patter preserves the source and skips unchanged repeat imports. Follow [storage and Anarlog import](library.md) for transfer steps, retained files, backup formats and migration limits.
 
 ## Connect an agent
 
-Patter's local MCP server can let Codex, Claude, or another stdio client search and work with your library while Patter is open. Access is off until you enable it, and read, edit, and processing permissions are separate. Follow the [agent connection guide](../agent-access.md) and check the connection with `patter_status` before reading conversations.
+Patter's local MCP server lets Codex, Claude or another stdio client search and work with your library while Patter is open. Access starts off, with separate read, edit and processing switches. The [agent connection guide](../agent-access.md) includes copyable setup prompts and commands; check the connection with `patter_status` before reading conversations.

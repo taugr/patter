@@ -38,8 +38,17 @@ export default defineConfig({
         ],
       },
       {
+        text: 'Set up Patter',
+        items: [
+          { text: 'Permissions', link: '/guide/permissions' },
+          { text: 'Calendar and meetings', link: '/guide/calendar' },
+          { text: 'Local models and templates', link: '/guide/models' },
+        ],
+      },
+      {
         text: 'Your library',
         items: [
+          { text: 'Storage and Anarlog import', link: '/guide/library' },
           { text: 'Google Drive backup', link: '/google-drive-backup' },
           { text: 'Connect an agent', link: '/agent-access' },
         ],
