@@ -1,6 +1,6 @@
 [package]
 name = "patter"
-version = "0.6.3"
+version = "0.6.4"
 description = "Your personal meeting notebook"
 edition = "2021"
 [build-dependencies]
