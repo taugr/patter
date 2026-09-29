@@ -18,6 +18,8 @@ Summaries require a local OpenAI-compatible model server. In **Settings → Summ
 
 To connect events, add your account in macOS **Internet Accounts**, enable Calendars, and check that events appear in Apple Calendar. Then use **Settings → Calendar → Connect calendar** and grant full Calendar access. Patter reads events and can create or reopen a linked note. It does not edit calendar events.
 
+From v0.6.1, Settings shows Calendar permission status and keeps connection errors beside the button. If Patter is missing from macOS Calendar permissions, click **Connect calendar** in the packaged app first; macOS lists apps after they request access. If access is denied, use **Calendar permissions** to enable Patter, then reconnect. **Check again** refreshes the status, and **Missing Google events?** links to Internet Accounts. The same dialog links to Notification, Microphone and Screen & System Audio settings. The revised macOS consent prompt still needs an end-to-end verification pass.
+
 Meeting reminders are optional. After connecting Calendar, enable them in **Settings → Calendar**, choose the lead time and calendars, then save. Patter must remain open for reminders to run. A reminder can open notes or offer a recording confirmation; it never starts recording automatically. Use **Test notification** to check macOS delivery.
 
 ## Move from Anarlog

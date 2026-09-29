@@ -1,6 +1,7 @@
 fn main() {
     println!("cargo:rerun-if-changed=native/main.swift");
     println!("cargo:rerun-if-changed=Info.plist");
+    println!("cargo:rerun-if-changed=native/Info.plist");
     println!("cargo:rerun-if-changed=parakeet/Package.swift");
     println!("cargo:rerun-if-changed=parakeet/Package.resolved");
     println!("cargo:rerun-if-changed=parakeet/Sources");
@@ -27,7 +28,7 @@ fn main() {
             "__info_plist",
             "-Xlinker",
         ])
-        .arg(root.join("Info.plist"))
+        .arg(root.join("native/Info.plist"))
         .arg("-o")
         .arg(root.join("resources/patter-native"))
         .status()

@@ -373,13 +373,6 @@ export default function App() {
         setSelectedId(items.find((m) => !m.archived)?.id ?? "");
         setPrefs(p);
         setReady(true);
-        if (storage.native && p.calendarEnabled) {
-          try {
-            setEvents(await storage.calendarEvents());
-          } catch (e) {
-            reportError(String(e));
-          }
-        }
       })
       .catch((e) => reportError(String(e)));
     return () => {

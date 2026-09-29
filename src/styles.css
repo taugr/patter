@@ -1389,7 +1389,7 @@ h3 {
   font-size: 12px;
 }
 
-.agent-settings .agent-option {
+.settings-section .agent-option {
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -1462,3 +1462,14 @@ h3 {
 .meeting-reminder strong, .meeting-reminder small { display: block; }
 .meeting-reminder small { margin-top: 4px; }
 .reminder-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+
+.permission-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+.permission-actions .text-button { display: inline-flex; align-items: center; gap: 5px; }
+.settings-section .permission-hint { font-size: 13px; margin: 8px 0; }
+.permission-help { margin: 12px 0 18px; }
+.permission-help summary { cursor: pointer; font-size: 13px; }

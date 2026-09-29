@@ -3,6 +3,7 @@ mod activity;
 mod agent;
 mod anarlog;
 mod backup;
+mod calendar;
 mod models;
 mod notifications;
 mod reminders;
@@ -177,28 +178,12 @@ async fn calendar_events(
 }
 async fn read_calendar(app: &tauri::AppHandle, request_access: bool) -> Result<Value> {
     let job = app.state::<activity::Activity>().job()?;
-    let bin = helper(app)?;
+    if request_access {
+        calendar::request(app).await?;
+    }
     tauri::async_runtime::spawn_blocking(move || {
         let _job = job;
-        let mut command = Command::new(bin);
-        command.arg("calendar");
-        if !request_access {
-            command.arg("--no-prompt");
-        }
-        let output = command.output().map_err(|e| e.to_string())?;
-        let data: Value = serde_json::from_slice(&output.stdout).map_err(|_| {
-            format!(
-                "Calendar access failed: {}",
-                String::from_utf8_lossy(&output.stderr)
-            )
-        })?;
-        if !output.status.success() {
-            return Err(data["error"]
-                .as_str()
-                .unwrap_or("Calendar access failed")
-                .to_string());
-        }
-        Ok(data)
+        calendar::read()
     })
     .await
     .map_err(|e| e.to_string())?
@@ -694,6 +679,9 @@ fn main() {
             summarize,
             import_audio,
             calendar_events,
+            calendar::calendar_permission,
+            calendar::open_permission_settings,
+            notifications::notification_permission,
             reminders::reminder_status,
             reminders::dismiss_reminder,
             reminders::test_reminder,

@@ -1,6 +1,10 @@
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Check, DownloadSimple, ArrowSquareOut } from "@phosphor-icons/react";
+import {
+  calendarPermissionText,
+  type CalendarPermission,
+} from "../lib/permissions";
 import { zoomLevels } from "../lib/zoom";
 import { Dialog } from "./Dialog";
 import {
@@ -56,6 +60,60 @@ export function Settings({
   const [downloading, setDownloading] = useState(false);
   const [importing, setImporting] = useState(false);
   const [backingUp, setBackingUp] = useState(false);
+  const [calendarMessage, setCalendarMessage] = useState("");
+  const [notificationMessage, setNotificationMessage] = useState("");
+  const [permissionMessage, setPermissionMessage] = useState("");
+  const [calendarPermission, setCalendarPermission] =
+    useState<CalendarPermission>(native ? "checking" : "unavailable");
+  const [notificationPermission, setNotificationPermission] = useState(
+    native ? "checking" : "unavailable",
+  );
+  const refreshPermissions = useCallback(async () => {
+    if (!native) return;
+    const [calendar, notifications] = await Promise.allSettled([
+      invoke<CalendarPermission>("calendar_permission"),
+      invoke<string>("notification_permission"),
+    ]);
+    setCalendarPermission(
+      calendar.status === "fulfilled" ? calendar.value : "unknown",
+    );
+    setNotificationPermission(
+      notifications.status === "fulfilled"
+        ? notifications.value
+        : "unavailable",
+    );
+  }, []);
+  useEffect(() => {
+    void refreshPermissions();
+    window.addEventListener("focus", refreshPermissions);
+    const timer = native
+      ? setInterval(() => void refreshPermissions(), 5000)
+      : undefined;
+    return () => {
+      window.removeEventListener("focus", refreshPermissions);
+      clearInterval(timer);
+    };
+  }, [refreshPermissions]);
+  async function permissionAction(
+    fn: () => Promise<void>,
+    report: (message: string) => void,
+  ) {
+    setBusy(true);
+    report("");
+    try {
+      await fn();
+    } catch (e) {
+      report(String(e));
+    } finally {
+      await refreshPermissions();
+      setBusy(false);
+    }
+  }
+  function openPermissions(kind: string, report: (message: string) => void) {
+    void invoke("open_permission_settings", { kind }).catch((e) =>
+      report(String(e)),
+    );
+  }
   async function act(fn: () => Promise<void>) {
     setBusy(true);
     setMessage("");
@@ -118,16 +176,60 @@ export function Settings({
             className="secondary"
             disabled={busy || !native}
             onClick={() =>
-              act(async () => {
+              permissionAction(async () => {
                 await onConnectCalendar();
-                setDraft({ ...draft, calendarEnabled: true });
-                setMessage("Calendar connected.");
-              })
+                setDraft((value) => ({ ...value, calendarEnabled: true }));
+                setCalendarMessage("Calendar connected.");
+              }, setCalendarMessage)
             }
           >
-            Connect calendar
+            {busy ? "Please wait…" : "Connect calendar"}
             <ArrowSquareOut size={16} />
           </button>
+          <p className="permission-hint" role="status">
+            {calendarPermissionText(calendarPermission)}
+          </p>
+          {calendarMessage && (
+            <p className="form-message" role="status">
+              {calendarMessage}
+            </p>
+          )}
+          {reminderError && !calendarMessage && (
+            <p className="form-message" role="status">
+              {reminderError}
+            </p>
+          )}
+          <div className="permission-actions">
+            <button
+              className="text-button"
+              disabled={!native || busy}
+              onClick={() => openPermissions("calendar", setCalendarMessage)}
+            >
+              Calendar permissions <ArrowSquareOut size={14} />
+            </button>
+            <button
+              className="text-button"
+              disabled={!native || busy}
+              onClick={() => void refreshPermissions()}
+            >
+              Check again
+            </button>
+          </div>
+          <details className="permission-help">
+            <summary>Missing Google events?</summary>
+            <p>
+              Add your Google account in macOS Internet Accounts and enable
+              Calendars. Check that your meetings appear in Apple Calendar, then
+              connect here.
+            </p>
+            <button
+              className="text-button"
+              disabled={!native || busy}
+              onClick={() => openPermissions("accounts", setCalendarMessage)}
+            >
+              Internet Accounts <ArrowSquareOut size={14} />
+            </button>
+          </details>
           <label className="agent-option">
             <input
               type="checkbox"
@@ -139,7 +241,7 @@ export function Settings({
                   setDraft({ ...draft, reminderEnabled: false });
                   return;
                 }
-                void act(async () => {
+                void permissionAction(async () => {
                   const allowed = await invoke<boolean>(
                     "request_reminder_permission",
                   );
@@ -148,7 +250,7 @@ export function Settings({
                       "Allow Patter in System Settings → Notifications, then try again.",
                     );
                   setDraft((value) => ({ ...value, reminderEnabled: true }));
-                });
+                }, setNotificationMessage);
               }}
             />
             Meeting reminders
@@ -249,7 +351,7 @@ export function Settings({
                 onPreviewReminder();
                 return;
               }
-              void act(async () => {
+              void permissionAction(async () => {
                 const allowed = await invoke<boolean>(
                   "request_reminder_permission",
                 );
@@ -258,17 +360,74 @@ export function Settings({
                     "Allow Patter in System Settings → Notifications.",
                   );
                 await invoke("test_reminder");
-                setMessage(
+                setNotificationMessage(
                   "Test sent. Check macOS notification settings or Focus if it does not appear.",
                 );
-              });
+              }, setNotificationMessage);
             }}
           >
             {native ? "Test notification" : "Preview reminder"}
           </button>
-          {reminderError && (
+          <div className="permission-actions">
+            <small>
+              Notifications:{" "}
+              {notificationPermission === "allowed"
+                ? "Allowed"
+                : notificationPermission === "blocked"
+                  ? "Off"
+                  : notificationPermission === "not requested"
+                    ? "Not requested"
+                    : notificationPermission === "checking"
+                      ? "Checking…"
+                      : "Available in the Mac app"}
+            </small>
+            <button
+              className="text-button"
+              disabled={!native || busy}
+              onClick={() =>
+                openPermissions("notifications", setNotificationMessage)
+              }
+            >
+              Notification settings <ArrowSquareOut size={14} />
+            </button>
+          </div>
+          {notificationMessage && (
             <p className="form-message" role="status">
-              {reminderError}
+              {notificationMessage}
+            </p>
+          )}
+        </section>
+        <section className="settings-section">
+          <h3>Recording permissions</h3>
+          <p>
+            Patter asks for microphone and computer-audio access when you start
+            recording. If access was denied, change it here, then reopen Patter.
+          </p>
+          <div className="permission-actions">
+            <button
+              className="text-button"
+              disabled={!native || busy}
+              onClick={() =>
+                openPermissions("microphone", setPermissionMessage)
+              }
+            >
+              Microphone <ArrowSquareOut size={14} />
+            </button>
+            <button
+              className="text-button"
+              disabled={!native || busy}
+              onClick={() => openPermissions("screen", setPermissionMessage)}
+            >
+              Screen &amp; System Audio <ArrowSquareOut size={14} />
+            </button>
+          </div>
+          <small>
+            Computer audio uses macOS Screen &amp; System Audio Recording
+            permission. Patter does not save screen video.
+          </small>
+          {permissionMessage && (
+            <p className="form-message" role="status">
+              {permissionMessage}
             </p>
           )}
         </section>

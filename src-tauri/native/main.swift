@@ -1,7 +1,6 @@
 import Foundation
 import ScreenCaptureKit
 import AVFoundation
-import EventKit
 import CoreMedia
 import Darwin
 
@@ -78,30 +77,11 @@ final class Recorder: NSObject, SCStreamOutput, SCStreamDelegate {
         if let failure { throw BridgeError(message: failure) }
     }
 }
-func calendar(requestAccess: Bool) async throws {
-    let store = EKEventStore()
-    if requestAccess {
-        guard try await store.requestFullAccessToEvents() else { throw BridgeError(message: "Calendar access was not granted. Enable Patter in System Settings → Privacy & Security → Calendars.") }
-    } else if EKEventStore.authorizationStatus(for: .event) != .fullAccess {
-        throw BridgeError(message: "Connect your calendar in Settings to enable meeting reminders.")
-    }
-    let from = Date(); let until = Calendar.current.date(byAdding: .day, value: 14, to: from)!
-    let events = store.events(matching: store.predicateForEvents(withStart: from, end: until, calendars: nil)).filter { !$0.isAllDay && $0.status != .canceled && !($0.attendees ?? []).contains(where: { $0.isCurrentUser && $0.participantStatus == .declined }) }.sorted { $0.startDate < $1.startDate }
-    let iso = ISO8601DateFormatter()
-    let rows: [[String: Any]] = events.map { event in
-        var row: [String: Any] = ["id": "\(event.calendar.calendarIdentifier):\(event.calendarItemExternalIdentifier ?? event.calendarItemIdentifier):\(iso.string(from: event.startDate))", "title": event.title ?? "Untitled meeting", "start": iso.string(from: event.startDate), "end": iso.string(from: event.endDate), "calendar": event.calendar.title, "calendarId": event.calendar.calendarIdentifier]
-        if let url = event.url { row["url"] = url.absoluteString }
-        return row
-    }
-    let data = try JSONSerialization.data(withJSONObject: rows)
-    print(String(data: data, encoding: .utf8)!); fflush(stdout)
-}
 @main struct PatterNative {
     static func main() async {
         do {
             let args = CommandLine.arguments
-            if args.count > 1 && args[1] == "calendar" { try await calendar(requestAccess: !args.contains("--no-prompt")); return }
-            guard args.count == 3, args[1] == "record" else { throw BridgeError(message: "Usage: patter-native calendar | record DIRECTORY") }
+            guard args.count == 3, args[1] == "record" else { throw BridgeError(message: "Usage: patter-native record DIRECTORY") }
             let destination = URL(fileURLWithPath: args[2], isDirectory: true)
             try FileManager.default.createDirectory(at: destination, withIntermediateDirectories: true)
             let recorder = Recorder(directory: destination)

@@ -112,6 +112,10 @@ pub async fn request_reminder_permission() -> Result<bool> {
     );
     rx.await.map_err(|e| e.to_string())?
 }
+#[tauri::command]
+pub async fn notification_permission() -> Result<String> {
+    permission().await
+}
 pub async fn permission() -> Result<String> {
     let (tx, rx) = tokio::sync::oneshot::channel();
     let tx = std::sync::Mutex::new(Some(tx));
