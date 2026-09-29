@@ -1,0 +1,35 @@
+:root {
+  --vp-font-family-base: 'Nunito Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --vp-font-family-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --vp-c-bg: #fbf7ef;
+  --vp-c-bg-soft: #f4eee4;
+  --vp-c-bg-alt: #f0e8db;
+  --vp-c-text-1: #282723;
+  --vp-c-text-2: #5d5851;
+  --vp-c-brand-1: #1b7180;
+  --vp-c-brand-2: #125761;
+  --vp-c-brand-3: #125761;
+  --vp-c-brand-soft: #e7eeea;
+}
+
+.VPHomeHero .name,
+.VPHomeHero .text,
+.VPFeature .title,
+.vp-doc h1,
+.vp-doc h2 {
+  font-family: Georgia, 'Times New Roman', serif;
+  letter-spacing: -0.035em;
+}
+
+.VPHomeHero .name,
+.VPHomeHero .text {
+  font-weight: 400;
+}
+
+.VPFeature {
+  border-radius: 14px;
+}
+
+.VPHomeHero .image img {
+  max-width: 210px;
+}

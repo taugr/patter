@@ -1,5 +1,8 @@
 node_modules/
 dist/
+_site/
+docs/.vitepress/dist/
+docs/.vitepress/cache/
 src-tauri/target/
 .DS_Store
 *.log

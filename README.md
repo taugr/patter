@@ -19,7 +19,8 @@
 
 <p align="center">
   <a href="https://github.com/taugr/patter/releases/latest">Download for Mac</a> ·
-  <a href="./INSTALL.md">Installation guide</a> ·
+  <a href="https://patter.labs.tau.gr/docs/">Guide</a> ·
+  <a href="./INSTALL.md">Installation reference</a> ·
   <a href="#first-setup">First setup</a> ·
   <a href="#run">Development</a>
 </p>

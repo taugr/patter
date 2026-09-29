@@ -57,4 +57,4 @@ The initial update test reproduced a Keychain failure when the ad-hoc code signa
 
 Exact wall-clock nightly triggering, offline/quota/revoked-authorization behavior, sleep/login and a second physical Mac remain live checks. Keep the existing Anarlog backup in place while these remaining cases are resolved.
 
-See the [design and acceptance plan](google-drive-backup-plan.md).
+The [design and acceptance plan](https://github.com/taugr/patter/blob/main/docs/google-drive-backup-plan.md) is available in the repository.

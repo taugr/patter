@@ -8,6 +8,9 @@
     "dev": "vite --host 127.0.0.1",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 127.0.0.1",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs",
     "test": "vitest run",
     "tauri": "tauri",
     "desktop": "tauri dev",
@@ -35,6 +38,7 @@
     "prettier": "^3.9.8",
     "typescript": "~5.9.3",
     "vite": "^6.4.2",
+    "vitepress": "^1.6.4",
     "vitest": "^3.2.4"
   }
 }
