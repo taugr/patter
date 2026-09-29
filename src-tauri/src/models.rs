@@ -161,6 +161,9 @@ mod tests {
                     }
                     Err(e) => panic!("{e}"),
                 };
+                // macOS can inherit the listener's nonblocking mode. The HTTP
+                // reader must wait for bytes that arrive after accept().
+                stream.set_nonblocking(false).unwrap();
                 stream
                     .set_read_timeout(Some(Duration::from_secs(3)))
                     .unwrap();
