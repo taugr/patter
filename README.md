@@ -76,7 +76,7 @@ Application: `src-tauri/target/release/bundle/macos/Patter.app`. Model weights a
 
 **Transcription:** In Settings → Models → Transcription, select Parakeet v3 (632 MB), Whisper Base (148 MB), or Whisper Small (488 MB), choose Download, then Save. Downloads come from Hugging Face; each file is verified before the model is marked ready. Cancellation/interruption keeps partial files for retry, and Verify / repair checks installed files. Once installed, transcription stays offline. Parakeet v3 supports English and 24 other European languages; Whisper supports broader language coverage. The manual Whisper file option accepts compatible whisper.cpp GGML `.bin` files, and older configured paths are preserved. Import or record audio, open Transcript, and choose Transcribe recording. Audio track labels (Microphone / Computer audio) are not speaker diarization. Captured chunks are still transcribed individually; improving long-call context remains future work.
 
-**Recording:** Record → Record microphone & computer audio. macOS may request microphone and screen/system-audio capture permissions. Capture was compiled but not activated during QA. Test permissions and playback on a short disposable conversation first.
+**Recording:** Record → Record microphone & computer audio. On launch, the packaged app offers setup for missing microphone and computer-audio permissions, plus Calendar and notifications if enabled. Choose **Allow**, **Open settings**, or **Later** to dismiss setup until the next launch. The check never starts a recording. Capture was compiled but not activated during QA. Test permissions and playback on a short disposable conversation first.
 
 ## Permanent library
 

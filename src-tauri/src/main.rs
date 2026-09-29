@@ -690,6 +690,8 @@ fn main() {
             reminders::test_reminder,
             notifications::request_reminder_permission,
             recording_permissions::request_recording_access,
+            recording_permissions::recording_permissions,
+            recording_permissions::request_capture_permission,
             start_recording,
             stop_recording,
             recording_status,

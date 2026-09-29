@@ -8,6 +8,8 @@ Create a conversation, edit its title and notes, mark actions complete, and sear
 
 ## Recordings and transcription
 
+On launch, the packaged app checks microphone and computer-audio access and offers **Set up access** if anything is missing. Calendar and notification access are included only when those features are enabled. Choose **Allow** for a new request or **Open settings** if access was denied. Returning from macOS Settings refreshes the check; macOS may require you to reopen Patter. **Later** dismisses setup until the next launch. Checking access never starts a recording or creates a conversation.
+
 Import an audio file into a conversation, or choose **Record → Record microphone & computer audio**. macOS can ask for microphone and screen/system-audio capture access. Patter stores audio chunks and imported originals in its local library. Computer audio and microphone labels identify tracks; they are not speaker diarization.
 
 To set up permissions before recording, open **Settings → General → Recording → Enable recording access** in the packaged app. This requests access without creating a conversation or capturing audio. macOS lists Patter after it requests access. Allow Microphone access, then Screen & System Audio Recording when prompted. If access was denied, use the shortcuts under **Settings → General → Recording → Permissions help**, allow Patter, then quit and reopen it. No screen video is saved. Release checks verify the audio entitlement on both the app and recording helper, plus their consent descriptions.

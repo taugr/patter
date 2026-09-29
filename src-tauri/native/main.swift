@@ -2,6 +2,7 @@ import Foundation
 import ScreenCaptureKit
 import AVFoundation
 import CoreMedia
+import CoreGraphics
 import Darwin
 
 func emit(_ value: [String: Any]) {
@@ -96,6 +97,29 @@ final class Recorder: NSObject, SCStreamOutput, SCStreamDelegate {
     static func main() async {
         do {
             let args = CommandLine.arguments
+            if args.count == 2, args[1] == "recording-permissions" {
+                let microphone: String
+                switch AVCaptureDevice.authorizationStatus(for: .audio) {
+                case .authorized: microphone = "allowed"
+                case .notDetermined: microphone = "not_requested"
+                case .denied: microphone = "denied"
+                case .restricted: microphone = "restricted"
+                @unknown default: microphone = "unknown"
+                }
+                // Preflight only: never prompts, enumerates windows, or starts capture.
+                emit(["microphone": microphone, "screenAllowed": CGPreflightScreenCaptureAccess()])
+                return
+            }
+            if args.count == 2, args[1] == "request-microphone-access" {
+                try await requestMicrophoneAccess()
+                emit(["status": "access-granted"])
+                return
+            }
+            if args.count == 2, args[1] == "request-screen-access" {
+                _ = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+                emit(["status": "access-granted"])
+                return
+            }
             if args.count == 2, args[1] == "request-recording-access" {
                 try await requestMicrophoneAccess()
                 // This requests consent/enumerates sources without creating a stream or audio files.

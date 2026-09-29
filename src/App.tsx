@@ -21,6 +21,7 @@ import { MeetingPane } from "./components/MeetingPane";
 import { Dialog } from "./components/Dialog";
 import { Updates, type UpdateInfo } from "./components/Updates";
 import { version as appVersion } from "../package.json";
+import { StartupPermissions } from "./components/StartupPermissions";
 import { Settings } from "./components/Settings";
 import { mergeAgentRefresh } from "./lib/agent-refresh";
 import * as storage from "./lib/storage";
@@ -106,6 +107,7 @@ export default function App() {
   const [recording, setRecording] = useState<string | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [ready, setReady] = useState(false);
+  const [startupAccessOpen, setStartupAccessOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const inFlight = useRef<Promise<void> | null>(null);
   const recordingRef = useRef(recording);
@@ -582,7 +584,12 @@ export default function App() {
       <MeetingReminders
         state={reminders}
         disabled={
-          !!busy || !!recording || !!modal || conflict || installingUpdate
+          !!busy ||
+          !!recording ||
+          !!modal ||
+          conflict ||
+          installingUpdate ||
+          startupAccessOpen
         }
         onRecord={recordCalendarEvent}
         onOpen={async (event) => {
@@ -763,6 +770,21 @@ export default function App() {
           e.target.value = "";
         }}
       />
+      {ready && storage.native && (
+        <StartupPermissions
+          calendarEnabled={preferences.calendarEnabled}
+          reminderEnabled={preferences.reminderEnabled}
+          blocked={
+            !!modal ||
+            !!busy ||
+            !!recording ||
+            conflict ||
+            installingUpdate ||
+            !!reminders.requested
+          }
+          onVisible={setStartupAccessOpen}
+        />
+      )}
       {modal === "record" && (
         <Dialog title="Start a conversation" onClose={() => setModal(null)}>
           {!storage.native && (
