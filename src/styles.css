@@ -1473,3 +1473,179 @@ h3 {
 .settings-section .permission-hint { font-size: 13px; margin: 8px 0; }
 .permission-help { margin: 12px 0 18px; }
 .permission-help summary { cursor: pointer; font-size: 13px; }
+
+/* Settings keeps navigation and save controls in view while each page scrolls. */
+.dialog.settings-dialog {
+  width: min(720px, calc(100vw - 32px));
+  height: min(740px, 90dvh);
+  max-height: 90dvh;
+  padding: 0;
+  overflow: hidden;
+}
+.settings-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+.settings-dialog .dialog-head {
+  margin: 0;
+  padding: 24px 28px 16px;
+  flex: none;
+}
+.settings-preview {
+  margin: 0;
+  padding: 0 28px 14px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.settings-dialog .settings-fields {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+.settings-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+.settings-tabs {
+  display: flex;
+  padding: 0 20px;
+  gap: 4px;
+  border-bottom: 1px solid var(--line);
+  flex: none;
+}
+.settings-tabs button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: 1;
+  padding: 14px 8px;
+  border-bottom: 3px solid transparent;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 700;
+}
+.settings-tabs button[aria-selected="true"] {
+  color: var(--teal);
+  border-bottom-color: var(--teal);
+  background: #388d8309;
+}
+.settings-tabs button:hover {
+  color: var(--teal);
+  background: #388d8309;
+}
+.settings-tabs button:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: -4px;
+  border-radius: 6px;
+}
+.settings-content {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 28px;
+}
+.settings-content [role="tabpanel"] {
+  padding: 4px 0 20px;
+}
+.settings-content [role="tabpanel"]:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: -2px;
+}
+.settings-content .settings-section:first-child {
+  border-top: 0;
+}
+.settings-content .settings-section {
+  padding: 18px 0;
+}
+.settings-content .settings-section h3 {
+  font-size: 17px;
+  margin-bottom: 10px;
+}
+.settings-content .settings-section label {
+  font-size: 14px;
+}
+.settings-content .settings-section p,
+.settings-content .settings-section small {
+  font-size: 13px;
+  line-height: 1.6;
+}
+.settings-content .settings-section small {
+  margin-top: 10px;
+}
+.settings-help {
+  margin: 16px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.settings-help > summary {
+  cursor: pointer;
+  width: fit-content;
+  font-weight: 600;
+}
+.settings-help[open] > summary {
+  margin-bottom: 12px;
+}
+.settings-help p {
+  margin-top: 12px;
+}
+.settings-import {
+  border-top: 1px solid var(--line);
+  padding-top: 20px;
+  margin-top: 0;
+}
+.settings-import > summary {
+  font-size: 15px;
+  color: var(--ink);
+}
+.settings-dialog .settings-footer {
+  margin: 0;
+  padding: 16px 28px;
+  flex: none;
+  gap: 16px;
+}
+.settings-footer > .form-message {
+  flex: 1;
+  margin: 0;
+}
+.settings-footer button {
+  flex-shrink: 0;
+}
+@media (max-width: 600px) {
+  .settings-dialog .dialog-head {
+    padding: 20px 20px 12px;
+  }
+  .settings-preview {
+    padding: 0 20px 12px;
+  }
+  .settings-tabs {
+    padding: 0 10px;
+    gap: 0;
+  }
+  .settings-tabs button {
+    font-size: 13px;
+    padding: 14px 6px;
+  }
+  .settings-tabs svg {
+    display: none;
+  }
+  .settings-content {
+    padding: 0 20px;
+  }
+  .settings-dialog .settings-footer {
+    padding: 14px 20px;
+    gap: 10px;
+  }
+}
+.settings-content .settings-zoom label {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+.settings-zoom select {
+  max-width: 150px;
+}

@@ -12,9 +12,9 @@ export function calendarPermissionText(status: CalendarPermission): string {
     case "checking":
       return "Checking calendar permission…";
     case "not_requested":
-      return "Click Connect calendar to request access. Patter appears in macOS Calendar permissions after this request.";
+      return "Connect calendar to request access. Patter appears in macOS permissions after this request.";
     case "allowed":
-      return "Full Calendar access allowed. Patter only reads your events.";
+      return "Calendar access allowed.";
     case "denied":
       return "Calendar access is off. Open Calendar permissions, allow Patter, then reconnect.";
     case "write_only":
@@ -22,7 +22,7 @@ export function calendarPermissionText(status: CalendarPermission): string {
     case "restricted":
       return "Calendar access is restricted by macOS or your administrator.";
     case "unavailable":
-      return "Open the packaged Patter app from Applications to configure permissions.";
+      return "Use the packaged Patter app to set permissions.";
     default:
       return "Calendar permission could not be checked. Try checking again.";
   }

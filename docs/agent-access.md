@@ -4,7 +4,7 @@ Available from v0.5.0. Keep the Mac app running while using the connection.
 
 ## Enable access
 
-1. Open **Settings → Agent access** and enable **Read entire library**.
+1. Open **Settings → Agents** and enable **Read entire library**.
 2. Optionally enable **Edit notes, titles and actions** and **Transcribe and summarize**. These switches save immediately. Reading alone cannot change library content.
 3. Expand **Connection setup** and choose **Copy settings**. Use this generated configuration to connect your client below.
 
@@ -31,7 +31,7 @@ command and args into my user config.toml (under CODEX_HOME if set, otherwise
 Update only Patter's connection when needed. Preserve other servers, settings,
 and existing approval rules. Leave an already-correct entry unchanged.
 
-Remind me to keep Patter running with Settings → Agent access → Read entire
+Remind me to keep Patter running with Settings → Agents → Read entire
 library enabled. Leave Patter's permissions unchanged. Verify the configuration,
 then call patter_status if the tool is available. Do not read or edit any
 conversations during setup. If this session cannot load the new server, tell me

@@ -62,6 +62,7 @@ jobs:
       - name: Inspect bundle
         run: |
           codesign --verify --deep --strict src-tauri/target/release/bundle/macos/Patter.app
+          node scripts/check-macos-permissions.mjs
           file src-tauri/target/release/bundle/macos/Patter.app/Contents/MacOS/patter
           otool -L src-tauri/target/release/bundle/macos/Patter.app/Contents/MacOS/patter
           otool -L src-tauri/target/release/bundle/macos/Patter.app/Contents/Resources/resources/patter-native

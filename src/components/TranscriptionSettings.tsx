@@ -90,7 +90,7 @@ export function TranscriptionSettings({
   return (
     <section className="settings-section">
       <h3>Transcription</h3>
-      <p>Download once; transcribe on your Mac.</p>
+
       <label>
         Model
         <select
@@ -126,7 +126,13 @@ export function TranscriptionSettings({
               {selected.installed ? "Verify / repair" : "Download model"}
             </button>
           </div>
-          <small>From Hugging Face · {selected.license}</small>
+          <details className="settings-help">
+            <summary>Model details</summary>
+            <p>
+              Downloaded from Hugging Face · {selected.license}. Runs on your
+              Mac.
+            </p>
+          </details>
         </>
       ) : (
         <>

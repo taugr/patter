@@ -70,13 +70,10 @@ export function AgentSettings({ disabled }: { disabled: boolean }) {
   }
   return (
     <section className="settings-section agent-settings">
-      <h3>Agent access</h3>
-      <p>
-        Connect Claude or another MCP agent. Keep Patter open while connected.
-      </p>
+      <p>Connect Codex, Claude or another MCP agent while Patter is open.</p>
       <p className="agent-privacy">
-        Permissions apply to all connected agents. Cloud agents may send library
-        text to their model provider. Patter’s processing stays local.
+        Cloud agents may send library text to their provider. These permissions
+        apply to every connected agent.
       </p>
       <label className="agent-option">
         <input
@@ -141,10 +138,14 @@ export function AgentSettings({ disabled }: { disabled: boolean }) {
               Copy settings
             </button>
           </details>
-          <small>
-            Permission changes apply immediately and prevent running jobs from
-            saving. Saved edits stay in version history.
-          </small>
+          <details className="settings-help">
+            <summary>How permissions work</summary>
+            <p>
+              Changes apply immediately and prevent running jobs from saving.
+              Saved edits stay in version history. Patter’s transcription and
+              summaries run locally.
+            </p>
+          </details>
         </>
       )}
       {!!state?.jobs.length && (

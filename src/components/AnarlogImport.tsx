@@ -39,7 +39,6 @@ export function AnarlogImport({
   }
   return (
     <section className="settings-section anarlog-import">
-      <h3>Import from Anarlog</h3>
       <p>
         Import conversations, notes, summaries and audio from Anarlog 1.0.27.
       </p>

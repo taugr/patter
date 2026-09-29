@@ -13,7 +13,7 @@ Patter's library is separate on each Mac. Replacing the app keeps the library at
 
 ## Update
 
-Patter checks for updates when the library opens. You can also choose **Patter → Check for Updates**. When an update is available, use **Settings → Updates → Install and restart**. It waits if recording, processing, importing, saving, or backing up is active.
+Patter checks for updates when the library opens. You can also choose **Patter → Check for Updates**. When an update is available, use **Settings → General → Updates → Install and restart**. It waits if recording, processing, importing, saving, or backing up is active.
 
 The updater verifies the signed release archive and makes a database snapshot before replacement. Original recordings stay in the library. For a separate copy that includes audio, use **Settings → Library → Back up library** or [Google Drive backup](../google-drive-backup.md).
 

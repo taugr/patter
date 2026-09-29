@@ -14,7 +14,7 @@ Create a conversation and write in Notes. Patter saves committed edits as versio
 
 For a first check, import a short recording. To capture a new one, choose **Record → Record microphone & computer audio** and grant the macOS permissions requested. Patter's live capture still needs a supervised reliability pass; test with disposable audio first.
 
-Open **Settings → Transcription**, choose and download a model, then open the conversation's **Transcript** tab and choose **Transcribe recording**. Downloads are verified; inference runs on your Mac. [Learn about recordings and models](using-patter.md#recordings-and-transcription).
+Open **Settings → Models → Transcription**, choose and download a model, then open the conversation's **Transcript** tab and choose **Transcribe recording**. Downloads are verified; inference runs on your Mac. [Learn about recordings and models](using-patter.md#recordings-and-transcription).
 
 ## 4. Add a summary or calendar
 

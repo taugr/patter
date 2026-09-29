@@ -8,7 +8,7 @@ Available from Patter v0.4.0. Patter uses its existing Rust/Tauri process and Go
 2. In [Google Cloud Console](https://console.cloud.google.com/), create or choose a project and enable **Google Drive API**.
 3. Configure Google Auth Platform branding/audience. Create a **Desktop app** OAuth client and download its JSON setup file. Keep this file outside the public repository. Use the same client on your other Macs, including when restoring.
 4. For ongoing use, move an External consent configuration out of **Testing**: Drive refresh tokens otherwise expire after seven days. Follow the console's applicable consent/branding requirements. See [Google's token-expiration documentation](https://developers.google.com/identity/protocols/oauth2#expiration).
-5. In **Settings → Google Drive backup → Connect Google Drive**, select that JSON file, then sign in using your browser. Allow Patter's `drive.file` access. Patter creates/reuses its own private **Patter Backups** folder; it does not request access to all your Drive files.
+5. In **Settings → Library → Google Drive → Connect Google Drive**, select that JSON file, then sign in using your browser. Allow Patter's `drive.file` access. Patter creates/reuses its own private **Patter Backups** folder; it does not request access to all your Drive files.
 6. Choose **Back up now** for the first backup. Then choose your local nightly time and **Enable nightly backups**.
 
 The JSON file configures the desktop OAuth client. Account refresh credentials are stored in macOS Keychain, never in the library, backups, logs, source, or release workflow. The OAuth connection is separate from the Mac Calendar connection. Connecting does not enable nightly uploads until you choose Enable.

@@ -24,10 +24,7 @@ export function Updates({
   return (
     <section className="settings-section" id="updates">
       <h3>Updates</h3>
-      <p>
-        Patter {info.currentVersion}
-        {!native && " · Browser preview"}
-      </p>
+      <p>Patter {info.currentVersion}</p>
       {info.update && (
         <>
           <p>

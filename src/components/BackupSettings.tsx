@@ -104,10 +104,8 @@ export function BackupSettings({
   const locked = disabled || busy || Boolean(data?.running) || !native;
   return (
     <section className="settings-section drive-backup">
-      <h3>Google Drive backup</h3>
-      <p>
-        Back up conversations, recordings, summaries and settings to your Drive.
-      </p>
+      <h3>Google Drive</h3>
+      <p>Back up your library and settings. Files are readable in Drive.</p>
       {!data?.config.connected ? (
         <>
           <button
@@ -382,11 +380,14 @@ export function BackupSettings({
           </button>
         </div>
       )}
-      <small>
-        Files are readable in Drive; previous backups are kept. Models and
-        passwords are excluded. After restoring, download models and reconnect
-        accounts.
-      </small>
+      <details className="settings-help">
+        <summary>What’s backed up?</summary>
+        <p>
+          Conversations, recordings, summaries and settings. Previous backups
+          are kept. Models and passwords are excluded; download models and
+          reconnect accounts after restoring.
+        </p>
+      </details>
       {message && (
         <p className="form-message" role="status">
           {message}

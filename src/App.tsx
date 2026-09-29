@@ -54,7 +54,7 @@ export default function App() {
       if (!quiet) setUpdateStatus(info.update ? "" : "You’re up to date.");
       if (quiet && info.update)
         setNotice(
-          `Patter ${info.update.version} is available in Settings → Updates.`,
+          `Patter ${info.update.version} is available in Settings → General → Updates.`,
         );
     } catch (e) {
       if (!quiet)

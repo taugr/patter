@@ -29,11 +29,11 @@
 
 A personal, local-first meeting notebook for Apple Silicon Macs running macOS 15 or later. Built with Tauri 2, Rust, SQLite, Swift audio/calendar and Parakeet helpers, and React + Vite. No hosted backend, account system, analytics, Electron runtime, or bundled model weights.
 
-Patter is in active personal development. **v0.6.0** adds interface zoom and configurable meeting reminders, alongside local MCP access, Parakeet model downloads, Anarlog import and Google Drive backup. Native audio capture, Calendar permissions and summary-model inference still need a supervised setup and reliability pass before relying on Patter for important meetings.
+Patter is in active personal development. **v0.6.2** adds focused Settings tabs and fixes the missing Calendar entitlement. Calendar consent has been confirmed in a packaged local test build. Native audio capture and summary-model inference still need a supervised setup and reliability pass before relying on Patter for important meetings.
 
 ## Install and updates
 
-Download the [latest Mac installer](https://github.com/taugr/patter/releases/latest). Drag Patter into Applications. Later, use Settings → Updates → Install and restart. Read [installation, release and recovery instructions](INSTALL.md), including the ad-hoc signing caveat. No Apple Developer membership or notarization is used.
+Download the [latest Mac installer](https://github.com/taugr/patter/releases/latest). Drag Patter into Applications. Later, use Settings → General → Updates → Install and restart. Read [installation, release and recovery instructions](INSTALL.md), including the ad-hoc signing caveat. No Apple Developer membership or notarization is used.
 
 ## Run
 
@@ -66,13 +66,13 @@ Application: `src-tauri/target/release/bundle/macos/Patter.app`. Model weights a
 
 **Calendar:** Add the Google account in macOS Internet Accounts and enable Calendars. Confirm the events appear in Apple Calendar, then use Patter Settings → Calendar → Connect calendar and grant access. macOS requires full calendar access for EventKit reads; Patter's implementation only reads. Events refresh every minute while Patter runs. Direct Google OAuth remains future work.
 
-**Calendar permission recovery (v0.6.1):** Open the packaged Patter app, then choose **Settings → Calendar → Connect calendar**. macOS lists an app in Calendar permissions after it requests access; there is no manual add button. Patter requests access from the app itself, shows the current permission state and keeps errors beside Connect. If access was denied, use **Calendar permissions** to enable Patter, return to the app and reconnect. **Check again** refreshes the status without requesting access. **Missing Google events?** links to Internet Accounts. Notification settings and recording-permission shortcuts are available in the same dialog. Unbundled `tauri dev` builds explain that permission setup requires a packaged app.
+**Calendar permission recovery:** Update to v0.6.2 or later, which includes the required Calendar entitlement. Open the packaged Patter app, then choose **Settings → Calendar → Connect calendar**. macOS lists an app in Calendar permissions after it requests access; there is no manual add button. Patter requests access from the app itself, shows the current permission state and keeps errors beside Connect. If access was denied, use **Calendar permissions** to enable Patter, return to the app and reconnect. **Check again** refreshes the status without requesting access. **Connection help** includes permission shortcuts and Google account setup. Notification settings and recording-permission shortcuts are available in the same dialog. Unbundled `tauri dev` builds explain that permission setup requires a packaged app.
 
 **Summaries:** Start a model in LM Studio's local server, then use `http://127.0.0.1:1234/v1`. For an existing Ollama server use `http://127.0.0.1:11434/v1`. Choose Find models, enter/select a model, and Save. The endpoint/model are preferences, not credentials. No cloud fallback is implemented.
 
-**Templates:** In Settings → Summary templates, choose a default and edit its instructions. Each template retains its own edits; Reset restores its built-in instructions. In a conversation's Overview, expand Summary template to override the default or add extra instructions. Changes apply on the next generation, using the same summary, decisions and next steps layout. Long-transcript processing also uses the selected instructions. Generated versions retain the exact instructions, template name, model and generation time; changing a template does not rewrite past summaries. Existing libraries default to General meeting without a database migration.
+**Templates:** In Settings → Models → Templates, choose a default and edit its instructions. Each template retains its own edits; Reset restores its built-in instructions. In a conversation's Overview, expand Summary template to override the default or add extra instructions. Changes apply on the next generation, using the same summary, decisions and next steps layout. Long-transcript processing also uses the selected instructions. Generated versions retain the exact instructions, template name, model and generation time; changing a template does not rewrite past summaries. Existing libraries default to General meeting without a database migration.
 
-**Transcription:** In Settings → Transcription, select Parakeet v3 (632 MB), Whisper Base (148 MB), or Whisper Small (488 MB), choose Download model, then Save. Downloads come from Hugging Face; each file is verified before the model is marked ready. Cancellation/interruption keeps partial files for retry, and Verify / repair checks installed files. Once installed, transcription stays offline. Parakeet v3 supports English and 24 other European languages; Whisper supports broader language coverage. The manual Whisper file option accepts compatible whisper.cpp GGML `.bin` files, and older configured paths are preserved. Import or record audio, open Transcript, and choose Transcribe recording. Audio track labels (Microphone / Computer audio) are not speaker diarization. Captured chunks are still transcribed individually; improving long-call context remains future work.
+**Transcription:** In Settings → Models → Transcription, select Parakeet v3 (632 MB), Whisper Base (148 MB), or Whisper Small (488 MB), choose Download model, then Save. Downloads come from Hugging Face; each file is verified before the model is marked ready. Cancellation/interruption keeps partial files for retry, and Verify / repair checks installed files. Once installed, transcription stays offline. Parakeet v3 supports English and 24 other European languages; Whisper supports broader language coverage. The manual Whisper file option accepts compatible whisper.cpp GGML `.bin` files, and older configured paths are preserved. Import or record audio, open Transcript, and choose Transcribe recording. Audio track labels (Microphone / Computer audio) are not speaker diarization. Captured chunks are still transcribed individually; improving long-call context remains future work.
 
 **Recording:** Record → Record microphone & computer audio. macOS may request microphone and screen/system-audio capture permissions. Capture was compiled but not activated during QA. Test permissions and playback on a short disposable conversation first.
 
@@ -115,7 +115,7 @@ An opt-in smoke test downloads a model into a separate test directory, transcrib
 cargo run --locked --manifest-path src-tauri/Cargo.toml --example transcription-smoke -- /tmp/patter-transcription-proof parakeet-v3 public/sample-conversation.wav
 ```
 
-**Moving from Anarlog 1.0.27:** Settings → Import from Anarlog previews and imports a copied Content/sessions folder, including notes, summaries, transcripts and retained audio. Original session files are preserved, repeat imports skip unchanged conversations, and existing Patter edits are never overwritten. See [the transfer instructions and format limits](INSTALL.md#import-an-anarlog-1027-library). Available from v0.4.0.
+**Moving from Anarlog 1.0.27:** Settings → Library → Import from Anarlog previews and imports a copied Content/sessions folder, including notes, summaries, transcripts and retained audio. Original session files are preserved, repeat imports skip unchanged conversations, and existing Patter edits are never overwritten. See [the transfer instructions and format limits](INSTALL.md#import-an-anarlog-1027-library). Available from v0.4.0.
 
 ### Google Drive backup
 
@@ -125,7 +125,7 @@ Connect your own Google Drive in Settings, choose a nightly time, or back up man
 
 **Available from v0.5.0.** Patter includes a local MCP server for Codex, Claude Desktop, Claude Code and other clients that support stdio. No separate server install or runtime is needed. Keep the Mac app open while connected.
 
-1. In **Settings → Agent access**, enable **Read entire library**.
+1. In **Settings → Agents**, enable **Read entire library**.
 2. Optionally enable **Edit notes, titles and actions** or **Transcribe and summarize**. Permissions save immediately and apply to all connected agents.
 3. Use the [copyable setup prompt](docs/agent-access.md#set-up-with-a-prompt) in **Codex or Claude Code on your Mac**. It configures that client, preserves existing settings and checks the connection without reading conversations. For development builds or custom installs, append the JSON from **Connection setup → Copy settings**.
 4. Keep Patter open. Restart your client or start a new session if needed, then ask it to call `patter_status`.
