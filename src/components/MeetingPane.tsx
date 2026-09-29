@@ -240,7 +240,7 @@ export function MeetingPane({
             <div className="empty-content">
               <Sparkle size={35} />
               <h2>No summary yet</h2>
-              <p>Summarize your notes or transcript with your local model.</p>
+              <p>Create a summary from your notes or transcript.</p>
               <button
                 className="secondary"
                 disabled={
@@ -309,26 +309,19 @@ export function MeetingPane({
             <h2>No transcript yet</h2>
             <p>
               {meeting.recordings.length
-                ? "Transcribe your recording with your selected local model."
-                : "Record a conversation or import audio to create a transcript."}
+                ? "Your recording is ready to transcribe."
+                : "Record or import audio to get started."}
             </p>
-            <button
-              className="secondary"
-              disabled={!!busy}
-              onClick={meeting.recordings.length ? onTranscribe : onImport}
-            >
-              {meeting.recordings.length ? (
-                <>
-                  <FileText size={19} />
-                  Transcribe recording
-                </>
-              ) : (
-                <>
-                  <UploadSimple size={19} />
-                  Import audio
-                </>
-              )}
-            </button>
+            {meeting.recordings.length > 0 && (
+              <button
+                className="secondary"
+                disabled={!!busy}
+                onClick={onTranscribe}
+              >
+                <FileText size={19} />
+                Transcribe recording
+              </button>
+            )}
           </div>
         )}
       </div>

@@ -92,7 +92,7 @@ export function TranscriptionSettings({
       <h3>Transcription</h3>
 
       <label>
-        Model
+        <span className="sr-only">Transcription model</span>
         <select
           value={draft.transcriptionModel}
           onChange={(e) => {
@@ -113,8 +113,8 @@ export function TranscriptionSettings({
           <p>{selected.description}</p>
           <div className="model-download-row">
             <span>
-              {megabytes(selected.size)} ·{" "}
-              {selected.installed ? "Downloaded" : "Not downloaded"}
+              {megabytes(selected.size)}
+              {selected.installed && " · Downloaded"}
             </span>
             <button
               type="button"
@@ -123,7 +123,7 @@ export function TranscriptionSettings({
               onClick={() => void download()}
             >
               <DownloadSimple size={18} />
-              {selected.installed ? "Verify / repair" : "Download model"}
+              {selected.installed ? "Verify / repair" : "Download"}
             </button>
           </div>
           <details className="settings-help">

@@ -270,34 +270,32 @@ export function Settings({
                     ? "Waiting for macOS…"
                     : "Enable recording access"}
                 </button>
-                <div className="permission-actions">
-                  <button
-                    className="text-button"
-                    disabled={!native || busy}
-                    onClick={() =>
-                      openPermissions("microphone", setPermissionMessage)
-                    }
-                  >
-                    Microphone <ArrowSquareOut size={14} />
-                  </button>
-                  <button
-                    className="text-button"
-                    disabled={!native || busy}
-                    onClick={() =>
-                      openPermissions("screen", setPermissionMessage)
-                    }
-                  >
-                    Screen &amp; System Audio <ArrowSquareOut size={14} />
-                  </button>
-                </div>
                 <details className="settings-help">
                   <summary>Permissions help</summary>
+                  <div className="permission-actions">
+                    <button
+                      className="text-button"
+                      disabled={!native || busy}
+                      onClick={() =>
+                        openPermissions("microphone", setPermissionMessage)
+                      }
+                    >
+                      Microphone <ArrowSquareOut size={14} />
+                    </button>
+                    <button
+                      className="text-button"
+                      disabled={!native || busy}
+                      onClick={() =>
+                        openPermissions("screen", setPermissionMessage)
+                      }
+                    >
+                      Screen &amp; System Audio <ArrowSquareOut size={14} />
+                    </button>
+                  </div>
                   <p>
-                    Enable recording access to grant permissions without
-                    starting a recording. Use the packaged Patter app; this is
-                    unavailable in the browser preview. Allow access in macOS,
-                    then reopen Patter if requested. System audio uses Screen
-                    &amp; System Audio Recording permission; no video is saved.
+                    Grant access without recording. If access was denied, use
+                    the shortcuts above, then reopen Patter. Computer audio uses
+                    Screen &amp; System Audio Recording; no video is saved.
                   </p>
                 </details>
                 {permissionMessage && (
@@ -316,9 +314,7 @@ export function Settings({
               tabIndex={0}
             >
               <section className="settings-section">
-                <p>
-                  Read meetings from your Mac’s calendars, including Google.
-                </p>
+                <p>Use calendars connected to this Mac.</p>
                 <button
                   className="secondary"
                   disabled={busy || !native}
@@ -329,26 +325,24 @@ export function Settings({
                         ...value,
                         calendarEnabled: true,
                       }));
-                      setCalendarMessage("Calendar connected.");
                     }, setCalendarMessage)
                   }
                 >
                   {busy ? "Please wait…" : "Connect calendar"}
                   <ArrowSquareOut size={16} />
                 </button>
-                <p className="permission-hint" role="status">
-                  {calendarPermissionText(calendarPermission)}
+                <p
+                  className={
+                    calendarMessage || reminderError
+                      ? "form-message"
+                      : "permission-hint"
+                  }
+                  role="status"
+                >
+                  {calendarMessage ||
+                    reminderError ||
+                    calendarPermissionText(calendarPermission)}
                 </p>
-                {calendarMessage && (
-                  <p className="form-message" role="status">
-                    {calendarMessage}
-                  </p>
-                )}
-                {reminderError && !calendarMessage && (
-                  <p className="form-message" role="status">
-                    {reminderError}
-                  </p>
-                )}
                 <details className="settings-help">
                   <summary>Connection help</summary>
                   <div className="permission-actions">
@@ -414,7 +408,7 @@ export function Settings({
                       }, setNotificationMessage);
                     }}
                   />
-                  Meeting reminders
+                  Notify me before meetings
                 </label>
                 <small>Patter must be open to send reminders.</small>
                 {draft.reminderEnabled && (
@@ -639,7 +633,7 @@ export function Settings({
                 <h3>Templates</h3>
 
                 <label>
-                  Default template
+                  Default
                   <select
                     value={draft.summaryTemplate}
                     onChange={(e) =>
@@ -710,11 +704,7 @@ export function Settings({
               />
               <section className="settings-section">
                 <h3>Local backup</h3>
-                <p>
-                  {native
-                    ? "Save a complete copy to a folder on this Mac."
-                    : "Export preview notes without audio."}
-                </p>
+                {!native && <p>Preview export excludes audio.</p>}
                 <button
                   className="secondary"
                   disabled={busy || importing || backingUp}

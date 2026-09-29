@@ -31,7 +31,10 @@ export function Updates({
             <strong>Version {info.update.version} is available.</strong>
           </p>
           {info.update.notes && (
-            <p className="release-notes">{info.update.notes}</p>
+            <details className="settings-help">
+              <summary>What’s new</summary>
+              <p className="release-notes">{info.update.notes}</p>
+            </details>
           )}
         </>
       )}
@@ -60,9 +63,11 @@ export function Updates({
           Save settings and finish recording or processing before installing.
         </small>
       )}
-      <p className="update-status" role="status">
-        {status}
-      </p>
+      {status && (
+        <p className="update-status" role="status">
+          {status}
+        </p>
+      )}
     </section>
   );
 }

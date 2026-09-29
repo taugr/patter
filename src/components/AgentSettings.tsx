@@ -70,7 +70,7 @@ export function AgentSettings({ disabled }: { disabled: boolean }) {
   }
   return (
     <section className="settings-section agent-settings">
-      <p>Connect Codex, Claude or another MCP agent while Patter is open.</p>
+      <p>Connect an MCP agent, such as Codex or Claude.</p>
       <p className="agent-privacy">
         Cloud agents may send library text to their provider. These permissions
         apply to every connected agent.
@@ -141,9 +141,9 @@ export function AgentSettings({ disabled }: { disabled: boolean }) {
           <details className="settings-help">
             <summary>How permissions work</summary>
             <p>
-              Changes apply immediately and prevent running jobs from saving.
-              Saved edits stay in version history. Patter’s transcription and
-              summaries run locally.
+              Patter must be open. Permission changes apply immediately and
+              prevent running jobs from saving. Saved edits stay in version
+              history. Patter’s transcription and summaries run locally.
             </p>
           </details>
         </>

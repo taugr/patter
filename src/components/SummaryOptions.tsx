@@ -22,11 +22,11 @@ export function SummaryOptions({
   return (
     <details className="summary-options">
       <summary>
-        Summary template <span>{template.name}</span>
+        Template <span>{template.name}</span>
       </summary>
       <fieldset disabled={busy}>
         <label>
-          Template for this conversation
+          Template
           <select
             value={meeting.summaryTemplate || ""}
             onChange={(e) =>
@@ -34,7 +34,7 @@ export function SummaryOptions({
             }
           >
             <option value="">
-              Use default ({summaryTemplate(preferences.summaryTemplate).name})
+              Default ({summaryTemplate(preferences.summaryTemplate).name})
             </option>
             {summaryTemplates.map((t) => (
               <option key={t.id} value={t.id}>
@@ -56,7 +56,7 @@ export function SummaryOptions({
             }
           />
         </label>
-        <small>Used for the next summary. Earlier versions are kept.</small>
+        <small>Applies to the next summary.</small>
         {meeting.summarySource && (
           <small>
             Last generated with {meeting.summarySource.templateName}.

@@ -12,7 +12,7 @@ export function calendarPermissionText(status: CalendarPermission): string {
     case "checking":
       return "Checking calendar permission…";
     case "not_requested":
-      return "Connect calendar to request access. Patter appears in macOS permissions after this request.";
+      return "Click Connect calendar. macOS lists Patter after this request.";
     case "allowed":
       return "Calendar access allowed.";
     case "denied":
