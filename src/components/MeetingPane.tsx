@@ -9,6 +9,7 @@ import {
   FileText,
   CircleNotch,
 } from "@phosphor-icons/react";
+import { JoinMeeting } from "./JoinMeeting";
 import { AudioPlayer } from "./AudioPlayer";
 import { SummaryOptions } from "./SummaryOptions";
 import type { Meeting, Preferences } from "../lib/types";
@@ -27,6 +28,7 @@ export function MeetingPane({
   busy,
   saving,
   activeRecording,
+  joinUrl,
 }: {
   meeting: Meeting;
   preferences: Preferences;
@@ -41,6 +43,7 @@ export function MeetingPane({
   busy: string;
   saving: string;
   activeRecording: boolean;
+  joinUrl?: string | null;
 }) {
   const [tab, setTab] = useState("overview");
   const [seek, setSeek] = useState<{
@@ -136,6 +139,11 @@ export function MeetingPane({
             </>
           )}
         </p>
+        <JoinMeeting
+          key={meeting.id}
+          url={joinUrl === undefined ? meeting.joinUrl : joinUrl}
+          title={meeting.title}
+        />
       </header>
       <div role="tablist" aria-label="Conversation view" className="tabs">
         {[

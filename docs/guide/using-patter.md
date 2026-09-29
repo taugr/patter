@@ -10,6 +10,8 @@ Create a conversation, edit its title and notes, mark actions complete, and sear
 
 Import an audio file into a conversation, or choose **Record → Record microphone & computer audio**. macOS can ask for microphone and screen/system-audio capture access. Patter stores audio chunks and imported originals in its local library. Computer audio and microphone labels identify tracks; they are not speaker diarization.
 
+To set up permissions before recording, open **Settings → General → Recording → Enable recording access** in the packaged app. This requests access without creating a conversation or capturing audio. macOS lists Patter after it requests access. Allow Microphone access, then Screen & System Audio Recording when prompted. If access was denied, use the shortcuts in **Settings → General → Recording**, allow Patter, then quit and reopen it. No screen video is saved. Release checks verify the audio entitlement on both the app and recording helper, plus their consent descriptions.
+
 In **Settings → Models → Transcription**, choose Parakeet v3, Whisper Base, or Whisper Small, select **Download model**, then **Save changes**. Downloads come from Hugging Face and are verified before use. Once installed, transcription runs offline. You can also select an existing compatible whisper.cpp GGML `.bin` file. Open a conversation's **Transcript** tab and choose **Transcribe recording**.
 
 Transcription on a short synthetic sample has been verified. Long calls, live capture, and model quality across accents and devices need further checks. Try a short disposable recording before an important meeting.
@@ -21,6 +23,8 @@ Summaries require a local OpenAI-compatible model server. In **Settings → Mode
 To connect events, add your account in macOS **Internet Accounts**, enable Calendars, and check that events appear in Apple Calendar. Then use **Settings → Calendar → Connect calendar** and grant full Calendar access. Patter reads events and can create or reopen a linked note. It does not edit calendar events.
 
 Use v0.6.2 or later for the Calendar entitlement fix. Settings shows permission status and keeps connection errors beside the button. If Patter is missing from macOS Calendar permissions, click **Connect calendar** in the packaged app first; macOS lists apps after they request access. If access is denied, use **Calendar permissions** to enable Patter, then reconnect. **Check again** refreshes the status, and **Connection help** includes permission shortcuts and Google account setup. The same dialog links to Notification, Microphone and Screen & System Audio settings. Calendar consent has been confirmed in a packaged local test build.
+
+**Join meeting** opens a Google Meet or Zoom link in your default browser, which can hand Zoom links to the Zoom app. Look for **Join** under Upcoming, or **Join meeting** in linked notes and reminders. Patter checks the event’s URL, location and invitation notes. Zoom passcodes in the link are retained. Joining does not start recording. Events without a recognised link have no Join button; new linked notes keep the link for later use.
 
 Meeting reminders are optional. After connecting Calendar, enable them in **Settings → Calendar**, choose the lead time and calendars, then save. Patter must remain open for reminders to run. A reminder can open notes or offer a recording confirmation; it never starts recording automatically. Use **Test notification** to check macOS delivery.
 

@@ -92,6 +92,8 @@ export function Settings({
   const [calendarMessage, setCalendarMessage] = useState("");
   const [notificationMessage, setNotificationMessage] = useState("");
   const [permissionMessage, setPermissionMessage] = useState("");
+  const [requestingRecordingAccess, setRequestingRecordingAccess] =
+    useState(false);
   const [calendarPermission, setCalendarPermission] =
     useState<CalendarPermission>(native ? "checking" : "unavailable");
   const [notificationPermission, setNotificationPermission] = useState(
@@ -247,7 +249,27 @@ export function Settings({
               </section>
               <section className="settings-section">
                 <h3>Recording</h3>
-                <p>Access is requested when you first record.</p>
+                <button
+                  className="secondary"
+                  disabled={!native || busy || installing}
+                  onClick={() =>
+                    void permissionAction(async () => {
+                      setRequestingRecordingAccess(true);
+                      try {
+                        await invoke("request_recording_access");
+                        setPermissionMessage(
+                          "Recording access allowed. If macOS asks you to restart Patter, quit and reopen it.",
+                        );
+                      } finally {
+                        setRequestingRecordingAccess(false);
+                      }
+                    }, setPermissionMessage)
+                  }
+                >
+                  {requestingRecordingAccess
+                    ? "Waiting for macOS…"
+                    : "Enable recording access"}
+                </button>
                 <div className="permission-actions">
                   <button
                     className="text-button"
@@ -271,9 +293,11 @@ export function Settings({
                 <details className="settings-help">
                   <summary>Permissions help</summary>
                   <p>
-                    Allow access in macOS, then reopen Patter. System audio uses
-                    Screen &amp; System Audio Recording permission; no video is
-                    saved.
+                    Enable recording access to grant permissions without
+                    starting a recording. Use the packaged Patter app; this is
+                    unavailable in the browser preview. Allow access in macOS,
+                    then reopen Patter if requested. System audio uses Screen
+                    &amp; System Audio Recording permission; no video is saved.
                   </p>
                 </details>
                 {permissionMessage && (

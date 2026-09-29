@@ -1649,3 +1649,36 @@ h3 {
 .settings-zoom select {
   max-width: 150px;
 }
+
+.upcoming-event + .upcoming-event {
+  margin-top: 14px;
+}
+.upcoming-event .join-meeting {
+  margin: 6px 0 0 39px;
+}
+.join-meeting button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.join-meeting.compact button {
+  padding: 6px 12px;
+  font-size: 13px;
+}
+.join-message {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+  max-width: 360px;
+}
+.meeting-header > .join-meeting {
+  margin-top: 14px;
+}
+/* Keep navigation reachable when invitations or link errors wrap in a short window. */
+.sidebar {
+  overflow-y: auto;
+}
+.sidebar .conversation-list {
+  min-height: 80px;
+}

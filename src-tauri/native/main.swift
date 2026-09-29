@@ -9,6 +9,21 @@ func emit(_ value: [String: Any]) {
 }
 struct BridgeError: Error, LocalizedError { let message: String; var errorDescription: String? { message } }
 
+func captureErrorMessage(_ error: Error) -> String {
+    let native = error as NSError
+    if native.domain == SCStreamError.errorDomain && native.code == SCStreamError.Code.userDeclined.rawValue {
+        return "Computer audio access was not granted. Allow Patter in System Settings → Privacy & Security → Screen & System Audio Recording, then quit and reopen Patter. You can open this page from Settings → General → Recording."
+    }
+    return error.localizedDescription
+}
+
+func requestMicrophoneAccess() async throws {
+    if AVCaptureDevice.authorizationStatus(for: .audio) == .restricted {
+        throw BridgeError(message: "Microphone access is restricted by macOS or your administrator.")
+    }
+    guard await AVCaptureDevice.requestAccess(for: .audio) else { throw BridgeError(message: "Microphone access was not granted. Allow Patter in System Settings → Privacy & Security → Microphone, then quit and reopen Patter. You can open this page from Settings → General → Recording.") }
+}
+
 @available(macOS 15.0, *)
 final class Recorder: NSObject, SCStreamOutput, SCStreamDelegate {
     let directory: URL
@@ -22,7 +37,7 @@ final class Recorder: NSObject, SCStreamOutput, SCStreamDelegate {
     var failure: String?
     init(directory: URL) { self.directory = directory }
     func start() async throws {
-        guard await AVCaptureDevice.requestAccess(for: .audio) else { throw BridgeError(message: "Microphone access was not granted. Enable it in System Settings → Privacy & Security → Microphone.") }
+        try await requestMicrophoneAccess()
         let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
         guard let display = content.displays.first else { throw BridgeError(message: "No display is available for computer audio capture.") }
         let filter = SCContentFilter(display: display, excludingApplications: [], exceptingWindows: [])
@@ -40,7 +55,7 @@ final class Recorder: NSObject, SCStreamOutput, SCStreamDelegate {
         try await capture.startCapture()
         emit(["status": "recording"])
     }
-    func stream(_ stream: SCStream, didStopWithError error: Error) { queue.async { self.failure = error.localizedDescription; emit(["error": error.localizedDescription]) } }
+    func stream(_ stream: SCStream, didStopWithError error: Error) { queue.async { self.failure = captureErrorMessage(error); emit(["error": captureErrorMessage(error)]) } }
     func stream(_ stream: SCStream, didOutputSampleBuffer sampleBuffer: CMSampleBuffer, of outputType: SCStreamOutputType) {
         guard outputType == .audio || outputType == .microphone, sampleBuffer.isValid, CMSampleBufferGetNumSamples(sampleBuffer) > 0, failure == nil else { return }
         do {
@@ -81,6 +96,13 @@ final class Recorder: NSObject, SCStreamOutput, SCStreamDelegate {
     static func main() async {
         do {
             let args = CommandLine.arguments
+            if args.count == 2, args[1] == "request-recording-access" {
+                try await requestMicrophoneAccess()
+                // This requests consent/enumerates sources without creating a stream or audio files.
+                _ = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+                emit(["status": "access-granted"])
+                return
+            }
             guard args.count == 3, args[1] == "record" else { throw BridgeError(message: "Usage: patter-native record DIRECTORY") }
             let destination = URL(fileURLWithPath: args[2], isDirectory: true)
             try FileManager.default.createDirectory(at: destination, withIntermediateDirectories: true)
@@ -91,6 +113,6 @@ final class Recorder: NSObject, SCStreamOutput, SCStreamDelegate {
             }
             try await recorder.stop()
             emit(["status": "stopped"])
-        } catch { emit(["error": error.localizedDescription]); exit(1) }
+        } catch { emit(["error": captureErrorMessage(error)]); exit(1) }
     }
 }

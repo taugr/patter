@@ -2,6 +2,7 @@ fn main() {
     println!("cargo:rerun-if-changed=native/main.swift");
     println!("cargo:rerun-if-changed=Info.plist");
     println!("cargo:rerun-if-changed=native/Info.plist");
+    println!("cargo:rerun-if-changed=native/Entitlements.plist");
     println!("cargo:rerun-if-changed=parakeet/Package.swift");
     println!("cargo:rerun-if-changed=parakeet/Package.resolved");
     println!("cargo:rerun-if-changed=parakeet/Sources");
@@ -41,7 +42,11 @@ fn main() {
             "-",
             "--identifier",
             "gr.tau.patter.native",
+            "--options",
+            "runtime",
+            "--entitlements",
         ])
+        .arg(root.join("native/Entitlements.plist"))
         .arg(root.join("resources/patter-native"))
         .status()
         .expect("codesign is required for the native bridge");

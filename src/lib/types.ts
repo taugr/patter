@@ -42,6 +42,7 @@ export interface Meeting {
   agentChange?: { source: string; tool: string; at: string };
   sample?: boolean;
   eventId?: string;
+  joinUrl?: string;
 }
 export interface CalendarEvent {
   id: string;
@@ -49,6 +50,7 @@ export interface CalendarEvent {
   start: string;
   end: string;
   url?: string;
+  joinUrl?: string;
   calendar: string;
   calendarId?: string;
 }

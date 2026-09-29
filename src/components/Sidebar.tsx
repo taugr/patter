@@ -8,6 +8,7 @@ import {
   ArrowLeft,
   Plus,
 } from "@phosphor-icons/react";
+import { JoinMeeting } from "./JoinMeeting";
 import { BackupHealth } from "./BackupHealth";
 import type { CalendarEvent, Meeting } from "../lib/types";
 import { native } from "../lib/storage";
@@ -80,31 +81,34 @@ export function Sidebar({
         <section className="upcoming">
           <h2>Upcoming</h2>
           {events.slice(0, 2).map((event) => (
-            <button
-              key={event.id}
-              onClick={() => onEvent(event)}
-              className="event-row"
-            >
-              <CalendarBlank size={23} />
-              <span>{event.title}</span>
-              <time>
-                {new Date(event.start).toDateString() !==
-                  new Date().toDateString() && (
-                  <small>
-                    {new Date(event.start).toLocaleDateString([], {
-                      weekday: "short",
-                      day: "numeric",
-                      month: "short",
-                    })}
-                    <br />
-                  </small>
-                )}
-                {new Date(event.start).toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </time>
-            </button>
+            <div className="upcoming-event" key={event.id}>
+              <button onClick={() => onEvent(event)} className="event-row">
+                <CalendarBlank size={23} />
+                <span>{event.title}</span>
+                <time>
+                  {new Date(event.start).toDateString() !==
+                    new Date().toDateString() && (
+                    <small>
+                      {new Date(event.start).toLocaleDateString([], {
+                        weekday: "short",
+                        day: "numeric",
+                        month: "short",
+                      })}
+                      <br />
+                    </small>
+                  )}
+                  {new Date(event.start).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </time>
+              </button>
+              <JoinMeeting
+                url={event.joinUrl ?? event.url}
+                title={event.title}
+                compact
+              />
+            </div>
           ))}
         </section>
       )}

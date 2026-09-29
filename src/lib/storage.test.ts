@@ -115,3 +115,27 @@ describe("permanent conversation history", () => {
     expect(matchesSearch(m, "missing")).toBe(false);
   });
 });
+
+describe("calendar meeting links", () => {
+  it("retains the join link independently of edited notes and in saved history", async () => {
+    const joinUrl = "https://zoom.us/j/123456789?pwd=Encoded%2BPass";
+    const original = await saveMeeting({
+      ...newMeeting("Calendar meeting"),
+      eventId: "calendar-occurrence",
+      joinUrl,
+      notes: joinUrl,
+    });
+    await saveMeeting({
+      ...original,
+      notes: "My notes without the invitation",
+    });
+    const reopened = (await listMeetings()).find((m) => m.id === original.id)!;
+    expect(reopened.joinUrl).toBe(joinUrl);
+    expect(reopened.eventId).toBe("calendar-occurrence");
+    expect(
+      (await history(original.id)).every(
+        (version) => version.joinUrl === joinUrl,
+      ),
+    ).toBe(true);
+  });
+});

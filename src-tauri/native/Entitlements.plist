@@ -2,9 +2,7 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <!-- Required by Hardened Runtime, even without App Sandbox or notarization. -->
-    <key>com.apple.security.personal-information.calendars</key>
-    <true/>
+    <!-- The recording executable needs its own Hardened Runtime capability. -->
     <key>com.apple.security.device.audio-input</key>
     <true/>
 </dict>

@@ -4,8 +4,10 @@ mod agent;
 mod anarlog;
 mod backup;
 mod calendar;
+mod meeting_links;
 mod models;
 mod notifications;
+mod recording_permissions;
 mod reminders;
 mod services;
 mod store;
@@ -680,12 +682,14 @@ fn main() {
             import_audio,
             calendar_events,
             calendar::calendar_permission,
+            meeting_links::open_meeting_link,
             calendar::open_permission_settings,
             notifications::notification_permission,
             reminders::reminder_status,
             reminders::dismiss_reminder,
             reminders::test_reminder,
             notifications::request_reminder_permission,
+            recording_permissions::request_recording_access,
             start_recording,
             stop_recording,
             recording_status,

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { CalendarEvent } from "../lib/types";
 import { native } from "../lib/storage";
+import { JoinMeeting } from "./JoinMeeting";
 import { Dialog } from "./Dialog";
 export type ReminderState = {
   events: CalendarEvent[];
@@ -69,6 +70,10 @@ export function MeetingReminders({
                 </small>
               </div>
               <div className="reminder-actions">
+                <JoinMeeting
+                  url={event.joinUrl ?? event.url}
+                  title={event.title}
+                />
                 <button
                   className="primary"
                   disabled={disabled || working}

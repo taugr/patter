@@ -115,6 +115,15 @@ pub fn read() -> Result<Value> {
             let item = event
                 .calendarItemExternalIdentifier()
                 .unwrap_or_else(|| event.calendarItemIdentifier());
+            let url = event
+                .URL()
+                .and_then(|url| url.absoluteString())
+                .map(|url| url.to_string());
+            let join_url = crate::meeting_links::find(&[
+                url.clone(),
+                event.location().map(|text| text.to_string()),
+                event.notes().map(|text| text.to_string()),
+            ]);
             rows.push(json!({
                 "id": format!("{calendar_id}:{item}:{start}"),
                 "title": event.title().to_string(),
@@ -122,7 +131,8 @@ pub fn read() -> Result<Value> {
                 "end": iso(event.endDate().timeIntervalSince1970())?,
                 "calendar": calendar.title().to_string(),
                 "calendarId": calendar_id,
-                "url": event.URL().and_then(|url| url.absoluteString()).map(|url| url.to_string()),
+                "url": url,
+                "joinUrl": join_url,
             }));
         }
         rows.sort_by(|a, b| a["start"].as_str().cmp(&b["start"].as_str()));

@@ -453,10 +453,16 @@ export default function App() {
       setQuery("");
       return existing;
     }
+    const links = [...new Set([event.url, event.joinUrl].filter(Boolean))];
     const saved = await storage.saveMeeting({
       ...newMeeting(event.title),
       eventId: event.id,
-      notes: `${event.calendar}\n${new Date(event.start).toLocaleString()}${event.url ? `\n${event.url}` : ""}`,
+      joinUrl: event.joinUrl ?? event.url,
+      notes: [
+        event.calendar,
+        new Date(event.start).toLocaleString(),
+        ...links,
+      ].join("\n"),
     });
     replace(saved);
     setSelectedId(saved.id);
@@ -529,11 +535,15 @@ export default function App() {
         {
           id: "sample-event",
           title: "Design catch-up",
+          joinUrl: "https://meet.google.com/abc-defg-hij",
           start: "2026-09-23T14:00:00+04:00",
           end: "2026-09-23T14:30:00+04:00",
           calendar: "Example calendar",
         },
       ];
+  const linkedEvent = displayedEvents.find(
+    (event) => event.id === selected?.eventId,
+  );
   return (
     <div className={`app ${detailOpen ? "detail-open" : ""}`}>
       <Sidebar
@@ -609,6 +619,11 @@ export default function App() {
       {selected ? (
         <MeetingPane
           meeting={selected}
+          joinUrl={
+            linkedEvent
+              ? (linkedEvent.joinUrl ?? linkedEvent.url ?? null)
+              : undefined
+          }
           preferences={preferences}
           onUpdate={update}
           saving={saving}
@@ -818,6 +833,7 @@ export default function App() {
             const event: CalendarEvent = {
               id: "preview-reminder",
               title: "Example meeting",
+              joinUrl: "https://zoom.us/j/123456789?pwd=example",
               calendar: "Example calendar",
               start: new Date(Date.now() + 300000).toISOString(),
               end: new Date(Date.now() + 3600000).toISOString(),

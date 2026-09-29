@@ -1,0 +1,39 @@
+[
+  { "url": "https://meet.google.com/abc-defg-hij", "supported": true },
+  {
+    "url": "https://meet.google.com/abc-defg-hij?authuser=1",
+    "supported": true
+  },
+  { "url": "https://meet.google.com/lookup/team-sync", "supported": true },
+  { "url": "https://zoom.us/j/123456789?pwd=abc%2BDEF%3D", "supported": true },
+  {
+    "url": "https://us02web.zoom.us/j/123456789?pwd=secret&from=calendar",
+    "supported": true
+  },
+  { "url": "https://company.zoom.us/my/team", "supported": true },
+  { "url": "https://zoom.com/j/123456789", "supported": true },
+  { "url": "https://us02web.zoom.us/wc/123456789/join", "supported": true },
+  { "url": "https://zoom.us/w/123456789?tk=token", "supported": true },
+  { "url": "https://MEET.GOOGLE.COM/abc-defg-hij", "supported": true },
+  { "url": "https://meet.google.com", "supported": false },
+  { "url": "https://meet.google.com/about", "supported": false },
+  { "url": "https://zoom.us/download", "supported": false },
+  { "url": "https://zoom.us/j/", "supported": false },
+  { "url": "https://zoom.us/j/not-a-meeting", "supported": false },
+  { "url": "https://zoom.us.evil.example/j/123456789", "supported": false },
+  { "url": "https://notzoom.us/j/123456789", "supported": false },
+  {
+    "url": "https://meet.google.com.evil.example/abc-defg-hij",
+    "supported": false
+  },
+  { "url": "https://evil.example@zoom.us/j/123456789", "supported": false },
+  { "url": "https://zoom.us@evil.example/j/123456789", "supported": false },
+  { "url": "https://zoom.us:8443/j/123456789", "supported": false },
+  { "url": "http://zoom.us/j/123456789", "supported": false },
+  { "url": "zoommtg://zoom.us/join?confno=123456789", "supported": false },
+  { "url": "file:///tmp/meeting", "supported": false },
+  { "url": "javascript:alert(1)", "supported": false },
+  { "url": "--args", "supported": false },
+  { "url": "https://zoom.us/j/12\n3456789", "supported": false },
+  { "url": "https://zoom.us\\j\\123456789", "supported": false }
+]

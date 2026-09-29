@@ -10,12 +10,36 @@ const exec = (command, args, input) => execFileSync(command, args, {
 });
 const plist = (xml) => JSON.parse(exec('/usr/bin/plutil', ['-convert', 'json', '-o', '-', '-'], xml));
 
-exec('/usr/bin/codesign', ['--verify', '--deep', '--strict', bundle]);
-const signed = exec('/usr/bin/codesign', ['--display', '--entitlements', '-', '--xml', bundle]);
-assert(signed.trim(), 'Bundle has no signed entitlements; Calendar consent will fail under Hardened Runtime');
-assert.equal(plist(signed)['com.apple.security.personal-information.calendars'], true,
-  'Bundle is missing the signed Calendar entitlement');
+function entitlements(path) {
+  exec('/usr/bin/codesign', ['--verify', '--deep', '--strict', path]);
+  const signed = exec('/usr/bin/codesign', ['--display', '--entitlements', '-', '--xml', path]);
+  assert(signed.trim(), `${path} has no signed entitlements`);
+  return plist(signed);
+}
+function description(info, key, label) {
+  assert.equal(typeof info[key], 'string', `${label}: missing ${key}`);
+  assert(info[key].trim(), `${label}: empty ${key}`);
+}
+
+const signed = entitlements(bundle);
+assert.equal(signed['com.apple.security.personal-information.calendars'], true,
+  'App is missing the signed Calendar entitlement');
+assert.equal(signed['com.apple.security.device.audio-input'], true,
+  'App is missing the signed Audio Input entitlement');
 const info = JSON.parse(exec('/usr/bin/plutil', ['-convert', 'json', '-o', '-', `${bundle}/Contents/Info.plist`]));
-assert.equal(typeof info.NSCalendarsFullAccessUsageDescription, 'string', 'Missing Calendar consent description');
-assert(info.NSCalendarsFullAccessUsageDescription.trim(), 'Empty Calendar consent description');
-console.log('Verified signed Calendar entitlement and full-access consent description.');
+description(info, 'NSCalendarsFullAccessUsageDescription', 'App');
+
+// Resources keep the helper's own signature; checking the app alone misses it.
+const helper = `${bundle}/Contents/Resources/resources/patter-native`;
+assert.equal(entitlements(helper)['com.apple.security.device.audio-input'], true,
+  'Recording helper is missing the signed Audio Input entitlement');
+const embedded = exec('/usr/bin/otool', ['-P', helper]);
+const start = embedded.indexOf('<?xml');
+const end = embedded.indexOf('</plist>', start);
+assert(start >= 0 && end > start, 'Recording helper has no embedded Info.plist');
+const helperInfo = plist(embedded.slice(start, end + '</plist>'.length));
+for (const [label, metadata] of [['App', info], ['Recording helper', helperInfo]]) {
+  description(metadata, 'NSMicrophoneUsageDescription', label);
+  description(metadata, 'NSScreenCaptureUsageDescription', label);
+}
+console.log('Verified app/helper signatures, Calendar and Audio Input entitlements, and Calendar/Microphone/Screen Capture consent descriptions.');
