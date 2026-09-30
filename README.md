@@ -35,6 +35,8 @@ Patter is in active personal development. **v0.6.2** adds focused Settings tabs 
 
 Download the [latest Mac installer](https://github.com/taugr/patter/releases/latest). Drag Patter into Applications. Later, use Settings → General → Updates → Install and restart. Read [installation, release and recovery instructions](INSTALL.md), including the ad-hoc signing caveat. No Apple Developer membership or notarization is used.
 
+Recording now targets the selected conversation, with **Record here** and **Record…** actions for Upcoming meetings. After Stop finalizes new audio, Patter transcribes it and generates a summary using the existing local model/template settings. Saved processing stages support retry after interruption without repeating a completed transcription. Empty/failed captures and very short transcripts skip automatic summaries. Calendar refresh runs on return to the app and via Upcoming → Refresh; all meetings are reachable through Show all.
+
 ## Run
 
 Requires Node 24.14, pnpm (pinned in package.json), Rust 1.96, and Swift 6.2+ / Xcode 26 command-line tools (Swift/C++). CI uses Xcode 26.3. The checked-in Cargo/CMake configuration targets a portable M1 CPU baseline while keeping Metal acceleration enabled.

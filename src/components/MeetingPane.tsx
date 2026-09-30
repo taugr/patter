@@ -8,6 +8,7 @@ import {
   UploadSimple,
   FileText,
   CircleNotch,
+  Microphone,
 } from "@phosphor-icons/react";
 import { JoinMeeting } from "./JoinMeeting";
 import { AudioPlayer } from "./AudioPlayer";
@@ -20,6 +21,9 @@ export function MeetingPane({
   onUpdate,
   onArchive,
   onImport,
+  onRecord,
+  onResumeProcessing,
+  recordingDisabled,
   onHistory,
   onExport,
   onSummarize,
@@ -35,6 +39,9 @@ export function MeetingPane({
   onUpdate: (m: Meeting) => void;
   onArchive: () => void;
   onImport: () => void;
+  onRecord: () => void;
+  onResumeProcessing: () => void;
+  recordingDisabled: boolean;
   onHistory: () => void;
   onExport: () => void;
   onSummarize: () => void;
@@ -54,6 +61,14 @@ export function MeetingPane({
   useEffect(() => {
     setTab(meeting.summary ? "overview" : "notes");
   }, [meeting.id]);
+  useEffect(() => {
+    if (meeting.recordingProcessing?.status === "complete") setTab("overview");
+    else if (meeting.recordingProcessing?.status === "skipped")
+      setTab("transcript");
+  }, [
+    meeting.recordingProcessing?.generation,
+    meeting.recordingProcessing?.status,
+  ]);
   return (
     <main className="meeting-pane">
       <header className="meeting-header">
@@ -65,6 +80,14 @@ export function MeetingPane({
             {saving}
           </span>
           <div>
+            <button
+              className="secondary"
+              onClick={onRecord}
+              disabled={recordingDisabled}
+            >
+              <Microphone size={18} />
+              Record here
+            </button>
             {meeting.summary && (
               <button
                 className="icon-button"
@@ -145,6 +168,26 @@ export function MeetingPane({
           title={meeting.title}
         />
       </header>
+      {meeting.recordingProcessing &&
+        !["complete", "skipped"].includes(
+          meeting.recordingProcessing.status,
+        ) && (
+          <div className="info-box" role="status">
+            <p>
+              {meeting.recordingProcessing.error ||
+                (busy ? busy : "Recording processing is pending.")}
+            </p>
+            <button
+              className="secondary"
+              disabled={!!busy || activeRecording}
+              onClick={onResumeProcessing}
+            >
+              {meeting.recordingProcessing.stage === "summary"
+                ? "Retry summary"
+                : "Resume transcription and summary"}
+            </button>
+          </div>
+        )}
       <div role="tablist" aria-label="Conversation view" className="tabs">
         {[
           ["overview", "Overview"],

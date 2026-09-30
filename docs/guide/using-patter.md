@@ -12,7 +12,9 @@ Use **Export conversation** for a JSON copy of a conversation and its saved hist
 
 On launch, the packaged app offers **Set up access** when recording permissions are missing. You can grant access, open macOS settings or choose Later. The check never starts recording. See [permissions and recovery](permissions.md).
 
-The sidebar's **Record → Record microphone & computer audio** creates a new conversation. Use **Stop** when finished; Patter saves the recording. It retains audio chunks and imported originals in its local library; computer-audio capture does not save screen video.
+Use **Record here** in the selected conversation, **Record…** beside an Upcoming meeting, or the sidebar’s **Record**. The confirmation names the conversation that will receive the audio. Choose **Record a new conversation instead** for a separate note. Use **Stop** when finished; Patter finalizes and saves the recording, then automatically transcribes the new audio and creates a summary using your selected local models and template. Earlier notes, audio and transcript segments are kept. It retains audio chunks and imported originals in its local library; computer-audio capture does not save screen video.
+
+Progress appears in the conversation. If processing fails or Patter closes partway through, use **Resume transcription and summary** or **Retry summary**. A summary retry keeps the completed transcript. Empty or failed captures do not trigger processing; very short transcripts are saved without an automatic summary. Model downloads and configuration remain in Settings.
 
 **Import audio** adds a file to the currently selected conversation. Choose and download a model under **Settings → Models → Transcription**, then use **Transcript → Transcribe recording**. [Local models and templates](models.md) covers Parakeet v3, Whisper, download verification and repair.
 

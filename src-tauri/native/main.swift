@@ -28,6 +28,7 @@ func requestMicrophoneAccess() async throws {
 @available(macOS 15.0, *)
 final class Recorder: NSObject, SCStreamOutput, SCStreamDelegate {
     let directory: URL
+    let baseOffset: Double
     let queue = DispatchQueue(label: "gr.tau.patter.audio")
     var stream: SCStream?
     var files: [String: AVAudioFile] = [:]
@@ -36,7 +37,7 @@ final class Recorder: NSObject, SCStreamOutput, SCStreamDelegate {
     let session = UUID().uuidString
     var sequence = 0
     var failure: String?
-    init(directory: URL) { self.directory = directory }
+    init(directory: URL, baseOffset: Double = 0) { self.directory = directory; self.baseOffset = baseOffset }
     func start() async throws {
         try await requestMicrophoneAccess()
         let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
@@ -75,7 +76,7 @@ final class Recorder: NSObject, SCStreamOutput, SCStreamDelegate {
             guard status == noErr, let pcm = AVAudioPCMBuffer(pcmFormat: format, bufferListNoCopy: list, deallocator: nil) else { throw BridgeError(message: "Could not prepare an audio chunk.") }
             let timestamp = CMTimeGetSeconds(CMSampleBufferGetPresentationTimeStamp(sampleBuffer))
             if firstTimestamp == nil { firstTimestamp = timestamp }
-            let offset = max(0, timestamp - (firstTimestamp ?? timestamp))
+            let offset = baseOffset + max(0, timestamp - (firstTimestamp ?? timestamp))
             let track = outputType == .microphone ? "microphone" : "computer"
             if files[track] == nil || offset - (starts[track] ?? 0) >= 5 {
                 files[track] = nil
@@ -127,10 +128,12 @@ final class Recorder: NSObject, SCStreamOutput, SCStreamDelegate {
                 emit(["status": "access-granted"])
                 return
             }
-            guard args.count == 3, args[1] == "record" else { throw BridgeError(message: "Usage: patter-native record DIRECTORY") }
+            guard (args.count == 3 || args.count == 4), args[1] == "record" else { throw BridgeError(message: "Usage: patter-native record DIRECTORY") }
             let destination = URL(fileURLWithPath: args[2], isDirectory: true)
             try FileManager.default.createDirectory(at: destination, withIntermediateDirectories: true)
-            let recorder = Recorder(directory: destination)
+            let baseOffset = args.count == 4 ? Double(args[3]) ?? .nan : 0
+            guard baseOffset.isFinite, baseOffset >= 0 else { throw BridgeError(message: "Invalid recording offset.") }
+            let recorder = Recorder(directory: destination, baseOffset: baseOffset)
             try await recorder.start()
             await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
                 DispatchQueue.global().async { _ = readLine(); continuation.resume() }

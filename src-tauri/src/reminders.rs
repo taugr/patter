@@ -22,6 +22,8 @@ pub struct Event {
     pub calendar: String,
     pub calendar_id: String,
     pub url: Option<String>,
+    #[serde(default)]
+    pub join_url: Option<String>,
 }
 #[derive(Default, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -34,7 +36,56 @@ pub struct Snapshot {
     last_updated: Option<String>,
 }
 #[derive(Default)]
-pub struct Reminders(Mutex<Snapshot>);
+pub struct Reminders {
+    snapshot: Mutex<Snapshot>,
+    refresh: tokio::sync::Mutex<()>,
+}
+pub fn update_calendar(state: &Reminders, fetched: Result<Value>) -> Result<()> {
+    let fetched = fetched
+        .and_then(|value| serde_json::from_value::<Vec<Event>>(value).map_err(|e| e.to_string()));
+    let mut snapshot = state
+        .snapshot
+        .lock()
+        .map_err(|_| "Calendar state lock failed")?;
+    match fetched {
+        Ok(events) => {
+            snapshot.events = events;
+            snapshot.error = None;
+            snapshot.last_updated = Some(Utc::now().to_rfc3339());
+            Ok(())
+        }
+        Err(error) => {
+            snapshot.error = Some(error.clone());
+            Err(error)
+        }
+    }
+}
+pub async fn connect_calendar(app: &tauri::AppHandle) -> Result<Value> {
+    let state = app.state::<Reminders>();
+    let _refresh = state.refresh.lock().await;
+    let fetched = crate::read_calendar(app, true).await;
+    update_calendar(&state, fetched.clone())?;
+    fetched
+}
+// Refresh never requests access: foreground/manual updates use existing consent.
+#[tauri::command]
+pub async fn refresh_calendar(app: tauri::AppHandle) -> Result<Value> {
+    let state = app.state::<Reminders>();
+    let _refresh = state.refresh.lock().await;
+    if preferences(&app)?["calendarEnabled"] != true {
+        update_calendar(&state, Ok(json!([])))?;
+        return Ok(json!([]));
+    }
+    let fetched = crate::read_calendar(&app, false).await;
+    if preferences(&app)?["calendarEnabled"] != true {
+        return update_calendar(&state, Ok(json!([]))).map(|()| json!([]));
+    }
+    let result = update_calendar(&state, fetched);
+    let events = state.snapshot.lock().unwrap().events.clone();
+    let _ = app.emit("patter-calendar-refreshed", &events);
+    result?;
+    Ok(json!(events))
+}
 fn time(value: &str) -> i64 {
     DateTime::parse_from_rfc3339(value)
         .map(|d| d.timestamp())
@@ -87,7 +138,7 @@ pub fn validate(p: &Value) -> Result<()> {
 }
 pub fn activate(app: &tauri::AppHandle, id: &str, record: bool) {
     if let Some(state) = app.try_state::<Reminders>() {
-        let mut state = state.0.lock().unwrap();
+        let mut state = state.snapshot.lock().unwrap();
         if record
             && state
                 .alerts
@@ -100,14 +151,14 @@ pub fn activate(app: &tauri::AppHandle, id: &str, record: bool) {
 }
 #[tauri::command]
 pub fn reminder_status(state: State<Reminders>) -> Value {
-    let mut state = state.0.lock().unwrap();
+    let mut state = state.snapshot.lock().unwrap();
     let value = serde_json::to_value(&*state).unwrap_or(json!({}));
     state.requested = None;
     value
 }
 #[tauri::command]
 pub fn dismiss_reminder(state: State<Reminders>, id: String) {
-    state.0.lock().unwrap().alerts.retain(|e| e.id != id);
+    state.snapshot.lock().unwrap().alerts.retain(|e| e.id != id);
     notifications::remove(&id);
 }
 #[tauri::command]
@@ -124,9 +175,10 @@ pub async fn test_reminder(state: State<'_, Reminders>) -> Result<()> {
         calendar: "Test reminder".into(),
         calendar_id: "test".into(),
         url: None,
+        join_url: None,
     };
     {
-        let mut state = state.0.lock().unwrap();
+        let mut state = state.snapshot.lock().unwrap();
         state.alerts.retain(|e| e.id != "patter-test");
         state.alerts.push(event);
     }
@@ -159,26 +211,15 @@ pub fn start(app: &tauri::AppHandle) {
                     || last_refresh.is_none_or(|at| at.elapsed() >= Duration::from_secs(60))
                 {
                     last_refresh = Some(Instant::now());
-                    let fetched = crate::read_calendar(&app, false).await.and_then(|v| {
-                        serde_json::from_value::<Vec<Event>>(v).map_err(|e| e.to_string())
-                    });
-                    let state = app.state::<Reminders>();
-                    let mut state = state.0.lock().unwrap();
-                    match fetched {
-                        Ok(events) => {
-                            state.events = events;
-                            state.error = None;
-                            state.last_updated = Some(Utc::now().to_rfc3339());
-                        }
-                        Err(e) => {
-                            state.error = Some(e);
-                            state.events.clear();
-                        }
-                    }
-                    let _ = app.emit("patter-calendar-refreshed", &state.events);
+                    let _ = refresh_calendar(app.clone()).await;
                 }
             } else {
-                app.state::<Reminders>().0.lock().unwrap().events.clear();
+                app.state::<Reminders>()
+                    .snapshot
+                    .lock()
+                    .unwrap()
+                    .events
+                    .clear();
                 last_refresh = None;
             }
             previous = p.clone();
@@ -187,7 +228,7 @@ pub fn start(app: &tauri::AppHandle) {
             seen.retain(|_, end| *end > now - 86400);
             let due_events = {
                 let state = app.state::<Reminders>();
-                let mut state = state.0.lock().unwrap();
+                let mut state = state.snapshot.lock().unwrap();
                 let events = state.events.clone();
                 state.alerts.retain(|alert| {
                     if alert.id == "patter-test" && time(&alert.end) > now {
@@ -221,14 +262,14 @@ pub fn start(app: &tauri::AppHandle) {
                     .and_then(|bytes| crate::agent::transport::write_private(&path, &bytes));
                 if let Err(e) = saved {
                     app.state::<Reminders>()
-                        .0
+                        .snapshot
                         .lock()
                         .unwrap()
                         .notification_error = Some(e);
                     continue;
                 }
                 app.state::<Reminders>()
-                    .0
+                    .snapshot
                     .lock()
                     .unwrap()
                     .alerts
@@ -250,7 +291,7 @@ pub fn start(app: &tauri::AppHandle) {
                     Err(e) => Err(e),
                 };
                 app.state::<Reminders>()
-                    .0
+                    .snapshot
                     .lock()
                     .unwrap()
                     .notification_error = result.err();
@@ -264,6 +305,27 @@ mod tests {
     use super::*;
     fn event() -> Event {
         serde_json::from_value(json!({"id":"a","title":"Meeting","start":"2026-09-28T12:00:00Z","end":"2026-09-28T13:00:00Z","calendar":"Work","calendarId":"work","url":null})).unwrap()
+    }
+    #[test]
+    fn refresh_preserves_join_links_and_last_good_calendar_on_failure() {
+        let state = Reminders::default();
+        let mut row = serde_json::to_value(event()).unwrap();
+        row["joinUrl"] = json!("https://meet.google.com/abc-defg-hij");
+        update_calendar(&state, Ok(json!([row]))).unwrap();
+        assert_eq!(
+            state.snapshot.lock().unwrap().events[0].join_url.as_deref(),
+            Some("https://meet.google.com/abc-defg-hij")
+        );
+        let updated = state.snapshot.lock().unwrap().last_updated.clone();
+        assert!(update_calendar(&state, Err("Calendar unavailable".into())).is_err());
+        let snapshot = state.snapshot.lock().unwrap();
+        assert_eq!(snapshot.events.len(), 1);
+        assert_eq!(snapshot.last_updated, updated);
+        assert_eq!(snapshot.error.as_deref(), Some("Calendar unavailable"));
+        drop(snapshot);
+        update_calendar(&state, Ok(json!([]))).unwrap();
+        assert!(state.snapshot.lock().unwrap().events.is_empty());
+        assert!(state.snapshot.lock().unwrap().error.is_none());
     }
     #[test]
     fn timing_filters_and_restart_deduplication() {

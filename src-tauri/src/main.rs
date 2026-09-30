@@ -8,6 +8,7 @@ mod meeting_links;
 mod models;
 mod notifications;
 mod recording_permissions;
+mod recording_processing;
 mod reminders;
 mod services;
 mod store;
@@ -29,6 +30,9 @@ struct Capture {
     child: Child,
     id: String,
     started: Instant,
+    offset: f64,
+    previous_audio: std::collections::HashSet<String>,
+    status_thread: std::thread::JoinHandle<()>,
     error: Arc<Mutex<Option<String>>>,
     _activity: activity::Guard,
 }
@@ -176,7 +180,7 @@ async fn calendar_events(
     activity: State<'_, activity::Activity>,
 ) -> Result<Value> {
     let _job = activity.job()?;
-    read_calendar(&app, true).await
+    reminders::connect_calendar(&app).await
 }
 async fn read_calendar(app: &tauri::AppHandle, request_access: bool) -> Result<Value> {
     let job = app.state::<activity::Activity>().job()?;
@@ -200,10 +204,17 @@ async fn start_recording(
 ) -> Result<()> {
     let job = activity.job()?;
     store::valid_id(&id)?;
-    {
+    let (offset, previous_audio) = {
         let db = lock_db(&lib)?;
-        store::load(&db, &id)?;
-    }
+        let meeting = store::load(&db, &id)?;
+        let previous = meeting["recordings"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(|r| r["id"].as_str().map(str::to_owned))
+            .collect();
+        (recording_offset(&meeting), previous)
+    };
     let directory = lib.root.join("recordings").join(&id);
     std::fs::create_dir_all(&directory).map_err(|e| e.to_string())?;
     let receiver = {
@@ -220,6 +231,7 @@ async fn start_recording(
         let mut child = Command::new(helper(&app)?)
             .arg("record")
             .arg(&directory)
+            .arg(offset.to_string())
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::null())
@@ -232,7 +244,7 @@ async fn start_recording(
         let error = Arc::new(Mutex::new(None));
         let errors = error.clone();
         let (sender, receiver) = std::sync::mpsc::channel();
-        std::thread::spawn(move || {
+        let status_thread = std::thread::spawn(move || {
             let mut initialized = false;
             for line in BufReader::new(stdout)
                 .lines()
@@ -262,6 +274,9 @@ async fn start_recording(
             child,
             id,
             started: Instant::now(),
+            offset,
+            previous_audio,
+            status_thread,
             error,
             _activity: job,
         });
@@ -276,6 +291,16 @@ async fn start_recording(
     })
     .await
     .map_err(|e| e.to_string())?;
+    if ready.is_ok() {
+        if let Some(capture) = runtime
+            .capture
+            .lock()
+            .map_err(|_| "Capture lock failed")?
+            .as_mut()
+        {
+            capture.started = Instant::now();
+        }
+    }
     if ready.is_err() {
         if let Some(mut capture) = runtime
             .capture
@@ -305,6 +330,28 @@ fn recording_status(runtime: State<Runtime>) -> Result<Value> {
     } else {
         Ok(json!({"active":false}))
     }
+}
+fn recording_offset(meeting: &Value) -> f64 {
+    let previous = meeting["duration"]
+        .as_f64()
+        .filter(|v| v.is_finite() && *v >= 0.0)
+        .unwrap_or(0.0);
+    meeting["recordings"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .fold(previous, |end, recording| {
+            let offset = recording["offset"]
+                .as_f64()
+                .filter(|v| v.is_finite() && *v >= 0.0)
+                .unwrap_or(0.0);
+            let length = recording["path"]
+                .as_str()
+                .and_then(|path| hound::WavReader::open(path).ok())
+                .map(|reader| reader.duration() as f64 / reader.spec().sample_rate as f64)
+                .unwrap_or(0.0);
+            end.max(offset + length)
+        })
 }
 fn collect_audio(lib: &Library, id: &str, duration: Option<f64>) -> Result<Value> {
     let directory = lib.root.join("recordings").join(id);
@@ -361,9 +408,7 @@ fn collect_audio(lib: &Library, id: &str, duration: Option<f64>) -> Result<Value
         };
         recordings.push(json!({"id":stem,"name":format!("{} · {:02}:{:02}",track,offset as u64/60,offset as u64%60),"path":playable,"track":track,"offset":offset}));
     }
-    if let Some(seconds) = duration {
-        m["duration"] = json!(seconds)
-    }
+    m["duration"] = json!(recording_offset(&m).max(duration.unwrap_or(0.0)));
     if m == before {
         Ok(m)
     } else {
@@ -378,20 +423,34 @@ async fn stop_recording(lib: State<'_, Library>, runtime: State<'_, Runtime>) ->
         .map_err(|_| "Capture lock failed")?
         .take()
         .ok_or("No active recording")?;
-    let duration = capture.started.elapsed().as_secs_f64();
+    let duration = capture.offset + capture.started.elapsed().as_secs_f64();
     if let Some(mut stdin) = capture.child.stdin.take() {
         let _ = stdin.write_all(b"stop\n");
     }
     let id = capture.id.clone();
+    let previous_audio = capture.previous_audio;
+    let capture_errors = capture.error.clone();
     let capture_activity = capture._activity;
+    let stopped_errors = capture_errors.clone();
     tauri::async_runtime::spawn_blocking(move || {
         let deadline = Instant::now() + std::time::Duration::from_secs(20);
         loop {
             match capture.child.try_wait() {
-                Ok(Some(_)) => break,
-                Err(_) => break,
+                Ok(Some(exit)) => {
+                    if !exit.success() {
+                        *stopped_errors.lock().unwrap() =
+                            Some("Capture exited with an error. Saved audio is retained.".into());
+                    }
+                    break;
+                }
+                Err(error) => {
+                    *stopped_errors.lock().unwrap() = Some(error.to_string());
+                    break;
+                }
                 Ok(None) => {
                     if Instant::now() > deadline {
+                        *stopped_errors.lock().unwrap() =
+                            Some("Capture did not finish in time. Saved audio is retained.".into());
                         let _ = capture.child.kill();
                         let _ = capture.child.wait();
                         break;
@@ -400,10 +459,17 @@ async fn stop_recording(lib: State<'_, Library>, runtime: State<'_, Runtime>) ->
                 }
             }
         }
+        let _ = capture.status_thread.join();
     })
     .await
     .map_err(|e| e.to_string())?;
-    let result = collect_audio(&lib, &id, Some(duration));
+    let result = collect_audio(&lib, &id, Some(duration)).and_then(|meeting| {
+        let successful = capture_errors
+            .lock()
+            .map_err(|_| "Capture status lock failed")?
+            .is_none();
+        recording_processing::queue(&lib, meeting, &previous_audio, successful)
+    });
     drop(capture_activity);
     result
 }
@@ -582,6 +648,7 @@ fn main() {
         .manage(updates::Pending::default())
         .plugin(tauri_plugin_dialog::init())
         .manage(reminders::Reminders::default())
+        .manage(recording_processing::Jobs::default())
         .manage(Runtime {
             capture: Mutex::new(None),
         })
@@ -681,6 +748,7 @@ fn main() {
             summarize,
             import_audio,
             calendar_events,
+            reminders::refresh_calendar,
             calendar::calendar_permission,
             meeting_links::open_meeting_link,
             calendar::open_permission_settings,
@@ -694,6 +762,7 @@ fn main() {
             recording_permissions::request_capture_permission,
             start_recording,
             stop_recording,
+            recording_processing::process_recording,
             recording_status,
             transcribe,
             transcription_models,
@@ -725,4 +794,46 @@ fn main() {
                 }
             }
         });
+}
+
+#[cfg(test)]
+mod recording_tests {
+    use super::*;
+    #[test]
+    fn repeated_and_interrupted_recordings_append_without_replacing_audio() {
+        let root =
+            std::env::temp_dir().join(format!("patter-capture-test-{}", uuid::Uuid::new_v4()));
+        let lib = store::open(&root).unwrap();
+        let id = uuid::Uuid::new_v4().to_string();
+        let meeting = json!({"id":id,"title":"Synthetic meeting","createdAt":chrono::Utc::now().to_rfc3339(),"duration":8.0,"notes":"Keep notes","summary":"","decisions":[],"actions":[],"transcript":[],"recordings":[],"archived":false,"revision":0,"eventId":"fixture-occurrence"});
+        store::save(&mut lock_db(&lib).unwrap(), meeting).unwrap();
+        let directory = root.join("recordings").join(&id);
+        std::fs::create_dir_all(&directory).unwrap();
+        // A synthetic WAV sidecar avoids afconvert and any audio device access.
+        for offset in [0, 8000] {
+            let stem = format!("{offset:010}-microphone-fixture");
+            std::fs::write(directory.join(format!("{stem}.caf")), []).unwrap();
+            let spec = hound::WavSpec {
+                channels: 1,
+                sample_rate: 8000,
+                bits_per_sample: 16,
+                sample_format: hound::SampleFormat::Int,
+            };
+            let mut writer =
+                hound::WavWriter::create(directory.join(format!("{stem}.wav")), spec).unwrap();
+            for _ in 0..8000 {
+                writer.write_sample(0i16).unwrap();
+            }
+            writer.finalize().unwrap();
+        }
+        let recovered = collect_audio(&lib, &id, None).unwrap();
+        assert_eq!(recovered["recordings"].as_array().unwrap().len(), 2);
+        assert_eq!(recovered["eventId"], "fixture-occurrence");
+        assert_eq!(recovered["notes"], "Keep notes");
+        assert_eq!(recording_offset(&recovered), 9.0);
+        let saved = collect_audio(&lib, &id, Some(10.0)).unwrap();
+        assert_eq!(saved["duration"], 10.0);
+        assert_eq!(saved["recordings"].as_array().unwrap().len(), 2);
+        std::fs::remove_dir_all(root).unwrap();
+    }
 }
