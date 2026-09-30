@@ -1693,3 +1693,8 @@ h3 {
 }
 .startup-permission p { margin: 5px 0 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
 .startup-permission-actions { display: flex; flex-direction: column; align-items: center; gap: 8px; flex-shrink: 0; }
+
+.upcoming-list { max-height: 260px; overflow-y: auto; }
+
+.upcoming-actions { display: flex; align-items: center; gap: 8px; margin-left: 39px; }
+.upcoming-actions .join-meeting { margin: 0; }

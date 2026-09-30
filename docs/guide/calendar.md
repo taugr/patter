@@ -18,7 +18,7 @@ Select a meeting under **Upcoming** to create or reopen its linked conversation.
 
 Use **Join** under Upcoming, or **Join meeting** in a linked conversation or reminder, to open a Google Meet or Zoom link. Patter looks in the event's URL, location and invitation notes. Zoom passcodes in the URL are preserved. The link opens in your default browser, which can hand a Zoom call to the Zoom app. Events without a recognised meeting link have no Join button. Joining a call does not start recording.
 
-The sidebar's **Record → Record microphone & computer audio** action starts a new conversation. **Record…** from a meeting reminder asks for confirmation and records into that meeting's linked conversation, reusing it when one already exists.
+Use **Record…** beside an Upcoming meeting, or open its notes and choose **Record here**. The sidebar’s **Record** also targets the selected conversation. The confirmation names the destination; **Record a new conversation instead** starts a separate note. Recordings append to the same conversation, preserving its notes and earlier audio. A failed start can be retried without creating another conversation. **Record…** from a meeting reminder uses the same linked conversation and asks for confirmation.
 
 ## Configure reminders
 
@@ -34,7 +34,7 @@ Use **Test notification** to check delivery. It does not read a calendar or star
 
 ## When reminders run
 
-Keep Patter open; it can run in the background. Calendar events refresh every minute and reminder timing is checked every ten seconds. Reminders stop when Patter quits and cannot run while the Mac sleeps. After waking, an upcoming meeting or one that started less than a minute ago can still produce a reminder.
+Keep Patter open; it can run in the background. Calendar events refresh every minute, when you return to Patter, and when you choose **Refresh** beside Upcoming. Refresh uses existing Calendar access and never requests new permission. Upcoming shows six events initially; use **Show all meetings** to see the rest. Recent contains saved conversations; opening or recording an event adds its linked conversation there. If a refresh fails, the last successful list stays visible alongside the error. Reminder timing is checked every ten seconds. Reminders stop when Patter quits and cannot run while the Mac sleeps. After waking, an upcoming meeting or one that started less than a minute ago can still produce a reminder.
 
 All-day, cancelled and declined events are skipped. Each delivered meeting occurrence is remembered across restarts to avoid duplicates; a rescheduled occurrence can notify again. Preferences are included in library backups, but notification permission must be granted on each Mac.
 

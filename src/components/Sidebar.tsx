@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Archive,
   CalendarBlank,
@@ -21,6 +22,12 @@ export function Sidebar({
   setMode,
   onSelect,
   onRecord,
+  recordingDisabled,
+  calendarEnabled,
+  calendarError,
+  refreshingCalendar,
+  onRefreshCalendar,
+  onRecordEvent,
   onSettings,
   onNew,
   events,
@@ -34,11 +41,18 @@ export function Sidebar({
   setMode: (value: string) => void;
   onSelect: (m: Meeting) => void;
   onRecord: () => void;
+  recordingDisabled: boolean;
+  calendarEnabled: boolean;
+  calendarError: string | null;
+  refreshingCalendar: boolean;
+  onRefreshCalendar: () => void;
+  onRecordEvent: (event: CalendarEvent) => void;
   onSettings: () => void;
   onNew: () => void;
   events: CalendarEvent[];
   onEvent: (e: CalendarEvent) => void;
 }) {
+  const [showAllEvents, setShowAllEvents] = useState(false);
   return (
     <aside className="sidebar">
       <div className="brand">
@@ -47,7 +61,11 @@ export function Sidebar({
           <strong>Patter</strong>
         </div>
       </div>
-      <button className="primary record-button" onClick={onRecord}>
+      <button
+        className="primary record-button"
+        onClick={onRecord}
+        disabled={recordingDisabled}
+      >
         <Microphone size={22} />
         Record
       </button>
@@ -77,39 +95,79 @@ export function Sidebar({
           Today
         </button>
       </div>
-      {events.length > 0 && mode !== "archive" && (
+      {calendarEnabled && mode !== "archive" && (
         <section className="upcoming">
-          <h2>Upcoming</h2>
-          {events.slice(0, 2).map((event) => (
-            <div className="upcoming-event" key={event.id}>
-              <button onClick={() => onEvent(event)} className="event-row">
-                <CalendarBlank size={23} />
-                <span>{event.title}</span>
-                <time>
-                  {new Date(event.start).toDateString() !==
-                    new Date().toDateString() && (
-                    <small>
-                      {new Date(event.start).toLocaleDateString([], {
-                        weekday: "short",
-                        day: "numeric",
-                        month: "short",
-                      })}
-                      <br />
-                    </small>
-                  )}
-                  {new Date(event.start).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </time>
-              </button>
-              <JoinMeeting
-                url={event.joinUrl ?? event.url}
-                title={event.title}
-                compact
-              />
-            </div>
-          ))}
+          <div className="list-heading">
+            <h2>Upcoming</h2>
+            <button
+              className="text-button"
+              disabled={refreshingCalendar}
+              onClick={onRefreshCalendar}
+              aria-label="Refresh upcoming meetings"
+            >
+              {refreshingCalendar ? "Refreshing…" : "Refresh"}
+            </button>
+          </div>
+          {calendarError && (
+            <p role="status" className="form-message">
+              {calendarError}
+            </p>
+          )}
+          {!events.length && !calendarError && (
+            <p className="permission-hint">No upcoming meetings.</p>
+          )}
+          <div className="upcoming-list">
+            {(showAllEvents ? events : events.slice(0, 6)).map((event) => (
+              <div className="upcoming-event" key={event.id}>
+                <button onClick={() => onEvent(event)} className="event-row">
+                  <CalendarBlank size={23} />
+                  <span>{event.title}</span>
+                  <time>
+                    {new Date(event.start).toDateString() !==
+                      new Date().toDateString() && (
+                      <small>
+                        {new Date(event.start).toLocaleDateString([], {
+                          weekday: "short",
+                          day: "numeric",
+                          month: "short",
+                        })}
+                        <br />
+                      </small>
+                    )}
+                    {new Date(event.start).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </time>
+                </button>
+                <div className="upcoming-actions">
+                  <button
+                    className="text-button"
+                    disabled={recordingDisabled}
+                    onClick={() => onRecordEvent(event)}
+                    aria-label={`Record ${event.title}`}
+                  >
+                    Record…
+                  </button>
+                  <JoinMeeting
+                    url={event.joinUrl ?? event.url}
+                    title={event.title}
+                    compact
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+          {events.length > 6 && (
+            <button
+              className="text-button"
+              onClick={() => setShowAllEvents((value) => !value)}
+            >
+              {showAllEvents
+                ? "Show fewer meetings"
+                : `Show all ${events.length} meetings`}
+            </button>
+          )}
         </section>
       )}
       <div className="list-heading">

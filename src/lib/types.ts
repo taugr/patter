@@ -41,6 +41,13 @@ export interface Meeting {
   revision: number;
   agentChange?: { source: string; tool: string; at: string };
   sample?: boolean;
+  recordingProcessing?: {
+    generation: string;
+    audioIds: string[];
+    stage: "transcript" | "summary" | "complete";
+    status: "pending" | "running" | "failed" | "complete" | "skipped";
+    error?: string | null;
+  };
   eventId?: string;
   joinUrl?: string;
 }

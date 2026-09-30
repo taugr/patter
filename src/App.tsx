@@ -23,6 +23,7 @@ import { Updates, type UpdateInfo } from "./components/Updates";
 import { version as appVersion } from "../package.json";
 import { StartupPermissions } from "./components/StartupPermissions";
 import { Settings } from "./components/Settings";
+import { recordingFlow } from "./lib/recording-flow";
 import { mergeAgentRefresh } from "./lib/agent-refresh";
 import * as storage from "./lib/storage";
 import {
@@ -87,6 +88,10 @@ export default function App() {
   const [query, setQuery] = useState("");
   const [mode, setMode] = useState("all");
   const [preferences, setPrefs] = useState<Preferences>(defaultPreferences);
+  const [recordTarget, setRecordTarget] = useState<
+    Meeting | CalendarEvent | null
+  >(null);
+  const [refreshingCalendar, setRefreshingCalendar] = useState(false);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [modal, setModal] = useState<"record" | "settings" | "history" | null>(
     null,
@@ -105,11 +110,22 @@ export default function App() {
   const [busy, setBusy] = useState("");
   const [saving, setSaving] = useState("");
   const [recording, setRecording] = useState<string | null>(null);
+  const [recordingInterrupted, setRecordingInterrupted] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [ready, setReady] = useState(false);
   const [startupAccessOpen, setStartupAccessOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const inFlight = useRef<Promise<void> | null>(null);
+  const capture = useRef(
+    recordingFlow({
+      start: storage.startRecording,
+      stop: storage.stopRecording,
+      status: storage.recordingStatus,
+    }),
+  );
+  const openingEvent = useRef<Promise<void>>(Promise.resolve());
+  const processingId = useRef<string | null>(null);
+  const calendarRefresh = useRef<Promise<void> | null>(null);
   const recordingRef = useRef(recording);
   recordingRef.current = recording;
   const [conflict, setConflict] = useState(false);
@@ -270,7 +286,7 @@ export default function App() {
         reportError("Wait for the update to finish before closing Patter.");
         return;
       }
-      if (recordingRef.current) {
+      if (recordingRef.current || capture.current.working) {
         reportError("Stop the recording before closing Patter.");
         return;
       }
@@ -303,6 +319,17 @@ export default function App() {
     let disposed = false;
     const stops: (() => void)[] = [];
     void Promise.all([
+      listen<{ id: string; stage: string }>(
+        "patter-recording-processing",
+        ({ payload }) => {
+          if (processingId.current === payload.id)
+            setBusy(
+              payload.stage === "transcript"
+                ? "Transcribing on this Mac"
+                : "Preparing your summary",
+            );
+        },
+      ),
       listen("patter-check-updates", () => {
         setModal("settings");
         void checkUpdates();
@@ -357,6 +384,41 @@ export default function App() {
       clearInterval(interval);
     };
   }, [ready, reportError]);
+  async function refreshCalendar() {
+    if (!storage.native || !preferences.calendarEnabled) return;
+    if (calendarRefresh.current) return calendarRefresh.current;
+    const task = (async () => {
+      setRefreshingCalendar(true);
+      try {
+        const latest = await invoke<CalendarEvent[]>("refresh_calendar");
+        setEvents(latest);
+        setReminders((state) => ({ ...state, events: latest, error: null }));
+      } catch (e) {
+        reportError(`Calendar could not refresh: ${String(e)}`);
+      } finally {
+        setRefreshingCalendar(false);
+      }
+    })();
+    calendarRefresh.current = task;
+    try {
+      await task;
+    } finally {
+      calendarRefresh.current = null;
+    }
+  }
+  useEffect(() => {
+    if (!ready || !storage.native || !preferences.calendarEnabled) return;
+    const refresh = () => {
+      if (!document.hidden) void refreshCalendar();
+    };
+    refresh();
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, [ready, preferences.calendarEnabled]);
   function update(m: Meeting) {
     replace(m);
     pending.current = m;
@@ -408,14 +470,19 @@ export default function App() {
   useEffect(() => {
     if (!recording) return;
     setElapsed(0);
+    setRecordingInterrupted(false);
     const started = Date.now();
     const id = setInterval(() => {
       setElapsed((Date.now() - started) / 1000);
       void storage
         .recordingStatus()
         .then((s) => {
-          if (s.error) {
-            reportError(s.error);
+          if (s.error || !s.active) {
+            setRecordingInterrupted(true);
+            reportError(
+              s.error ||
+                "Recording stopped unexpectedly. Press Stop to recover the saved audio.",
+            );
           }
         })
         .catch((e) => reportError(String(e)));
@@ -447,6 +514,15 @@ export default function App() {
     setDetailOpen(true);
   }
   async function openCalendarEvent(event: CalendarEvent): Promise<Meeting> {
+    // Queue every open, including concurrent opens of different events.
+    const task = openingEvent.current.then(() => resolveCalendarEvent(event));
+    openingEvent.current = task.then(
+      () => {},
+      () => {},
+    );
+    return task;
+  }
+  async function resolveCalendarEvent(event: CalendarEvent): Promise<Meeting> {
     await flush();
     const existing = meetingsRef.current.find((m) => m.eventId === event.id);
     if (existing) {
@@ -473,15 +549,104 @@ export default function App() {
     setDetailOpen(true);
     return saved;
   }
-  async function recordCalendarEvent(event: CalendarEvent) {
-    if (recordingRef.current || busy || installingRef.current)
+  function requestRecording(target: Meeting | CalendarEvent | null) {
+    if (capture.current.active) {
+      setSelectedId(capture.current.active);
+      setDetailOpen(true);
+      return;
+    }
+    if (capture.current.working || busy || installingRef.current) return;
+    setError("");
+    setRecordTarget(target);
+    setModal("record");
+  }
+  async function startRecording(target: Meeting | CalendarEvent | null) {
+    if (
+      busy ||
+      installingRef.current ||
+      capture.current.working ||
+      capture.current.active
+    )
       throw new Error("Finish the current recording or task first.");
+    setError("");
+    setNotice("");
     setBusy("Starting recording");
     try {
-      const meeting = await openCalendarEvent(event);
-      await storage.startRecording(meeting.id);
-      setRecording(meeting.id);
+      const id = await capture.current.start(async () => {
+        await flush();
+        if (!target || !("recordings" in target)) {
+          const meeting = target
+            ? await openCalendarEvent(target)
+            : await create("New conversation");
+          // Retrying a denied/failed start reuses the same prepared conversation.
+          setRecordTarget(meeting);
+          return meeting;
+        }
+        const current = meetingsRef.current.find((m) => m.id === target.id);
+        if (!current)
+          throw new Error("This conversation is no longer available.");
+        await choose(current);
+        setMode(current.archived ? "archive" : "all");
+        setQuery("");
+        return current;
+      });
+      recordingRef.current = id;
+      setRecording(id);
+      setModal(null);
     } finally {
+      setBusy("");
+    }
+  }
+  async function recordCalendarEvent(event: CalendarEvent) {
+    await startRecording(event);
+  }
+  async function stopRecording() {
+    if (capture.current.working) return;
+    setError("");
+    setNotice("");
+    setBusy("Finishing your recording");
+    const previousGeneration = meetingsRef.current.find(
+      (m) => m.id === capture.current.active,
+    )?.recordingProcessing?.generation;
+    try {
+      const m = await capture.current.stop(flush);
+      replace(m);
+      recordingRef.current = null;
+      setRecording(null);
+      if (
+        m.recordingProcessing?.status === "pending" &&
+        m.recordingProcessing.generation !== previousGeneration
+      )
+        await finishRecordingProcessing(m.id);
+      else setNotice("Recording saved. No new complete audio to process.");
+    } catch (e) {
+      reportError(String(e));
+    } finally {
+      recordingRef.current = capture.current.active;
+      setRecording(capture.current.active);
+      setBusy("");
+    }
+  }
+  async function finishRecordingProcessing(id: string) {
+    if (processingId.current) return;
+    processingId.current = id;
+    setNotice("");
+    setBusy("Transcribing on this Mac");
+    try {
+      const m = await invoke<Meeting>("process_recording", { id });
+      replace(m);
+      setNotice(
+        m.recordingProcessing?.status === "skipped"
+          ? m.recordingProcessing.error || "Transcript saved."
+          : "Recording, transcript and summary saved.",
+      );
+    } catch (e) {
+      const latest = await storage.listMeetings();
+      const m = latest.find((m) => m.id === id);
+      if (m) replace(m);
+      reportError(`Recording saved. Processing needs attention: ${String(e)}`);
+    } finally {
+      processingId.current = null;
       setBusy("");
     }
   }
@@ -559,11 +724,13 @@ export default function App() {
           setDetailOpen(false);
         }}
         onSelect={(m) => void act(() => choose(m))}
-        onRecord={() => {
-          if (recording) {
-            setSelectedId(recording);
-          } else setModal("record");
-        }}
+        onRecord={() => requestRecording(selected ?? null)}
+        recordingDisabled={!ready || !!busy || installingUpdate || conflict}
+        calendarEnabled={storage.native ? preferences.calendarEnabled : true}
+        calendarError={reminders.error}
+        refreshingCalendar={refreshingCalendar}
+        onRefreshCalendar={() => void refreshCalendar()}
+        onRecordEvent={(event) => requestRecording(event)}
         onSettings={() =>
           void act(async () => {
             setModal("settings");
@@ -650,6 +817,13 @@ export default function App() {
               );
             })
           }
+          onResumeProcessing={() =>
+            void act(() => finishRecordingProcessing(selected.id))
+          }
+          onRecord={() => requestRecording(selected)}
+          recordingDisabled={
+            !!recording || !!busy || conflict || installingUpdate
+          }
           onImport={() => void importFile()}
           onHistory={() =>
             void act(async () => {
@@ -683,7 +857,7 @@ export default function App() {
           </p>
           <button
             className="primary"
-            onClick={() => setModal("record")}
+            onClick={() => requestRecording(null)}
             disabled={!ready}
           >
             <Microphone size={21} />
@@ -705,32 +879,18 @@ export default function App() {
       {recording && (
         <div className="recording-banner" role="status">
           <Microphone size={20} />
-          <strong>Recording</strong>
+          <strong>
+            {recordingInterrupted ? "Recording interrupted" : "Recording"}
+          </strong>
           <time>{formatTime(elapsed)}</time>
           <span>Microphone + computer audio</span>
-          <button
-            onClick={() =>
-              void act(async () => {
-                setBusy("Finishing your recording");
-                try {
-                  const m = await storage.stopRecording();
-                  replace(m);
-                  setRecording(null);
-                  setNotice("Recording saved.");
-                } finally {
-                  setRecording(null);
-                  setBusy("");
-                }
-              })
-            }
-            disabled={!!busy}
-          >
+          <button onClick={() => void stopRecording()} disabled={!!busy}>
             <Stop weight="fill" size={18} />
             Stop
           </button>
         </div>
       )}
-      {(error || notice) && (
+      {(error || notice) && modal !== "record" && (
         <div
           className={`toast ${error ? "error" : ""}`}
           role={error ? "alert" : "status"}
@@ -786,7 +946,27 @@ export default function App() {
         />
       )}
       {modal === "record" && (
-        <Dialog title="Start a conversation" onClose={() => setModal(null)}>
+        <Dialog
+          title={
+            recordTarget
+              ? `Record ${recordTarget.title}`
+              : "Start a conversation"
+          }
+          onClose={() => {
+            if (!capture.current.working) setModal(null);
+          }}
+        >
+          {error && (
+            <p className="form-message" role="alert">
+              {error}
+            </p>
+          )}
+          {recordTarget && (
+            <p>
+              Save this recording in <strong>{recordTarget.title}</strong>. Your
+              existing notes and audio are kept.
+            </p>
+          )}
           {!storage.native && (
             <div className="info-box">
               Recording is available in the Mac app. You can try notes and
@@ -797,54 +977,62 @@ export default function App() {
             className="choice-button"
             disabled={!storage.native || !!busy}
             onClick={() =>
-              void act(async () => {
-                setBusy("Starting recording");
-                try {
-                  const m = await create("New conversation");
-                  await storage.startRecording(m.id);
-                  setRecording(m.id);
-                  setModal(null);
-                } finally {
-                  setBusy("");
-                }
-              })
+              void startRecording(recordTarget).catch((e) =>
+                reportError(String(e)),
+              )
             }
           >
             <Microphone size={28} />
             <span>
-              <strong>Record microphone & computer audio</strong>
+              <strong>
+                {busy ? "Starting…" : "Record microphone & computer audio"}
+              </strong>
               <small>
-                macOS will ask for permission. Start only when everyone is
-                comfortable being recorded.
+                Start only when everyone is comfortable being recorded.
               </small>
             </span>
           </button>
-          <button
-            className="choice-button"
-            onClick={() =>
-              void act(async () => {
-                await create();
-                setModal(null);
-              })
-            }
-          >
-            <NotePencil size={28} />
-            <span>
-              <strong>Take notes</strong>
-            </span>
-          </button>
-          <button
-            className="choice-button"
-            onClick={() => {
-              setModal(null);
-              void importFile();
-            }}
-          >
-            <UploadSimple size={28} />
-            <span>
-              <strong>Import a recording</strong>
-            </span>
-          </button>
+          {recordTarget && (
+            <button
+              className="text-button"
+              disabled={!!busy}
+              onClick={() => setRecordTarget(null)}
+            >
+              Record a new conversation instead
+            </button>
+          )}
+          {!recordTarget && (
+            <>
+              <button
+                className="choice-button"
+                disabled={!!busy}
+                onClick={() =>
+                  void act(async () => {
+                    await create();
+                    setModal(null);
+                  })
+                }
+              >
+                <NotePencil size={28} />
+                <span>
+                  <strong>Take notes</strong>
+                </span>
+              </button>
+              <button
+                className="choice-button"
+                disabled={!!busy}
+                onClick={() => {
+                  setModal(null);
+                  void importFile();
+                }}
+              >
+                <UploadSimple size={28} />
+                <span>
+                  <strong>Import a recording</strong>
+                </span>
+              </button>
+            </>
+          )}
         </Dialog>
       )}
       {modal === "settings" && (
