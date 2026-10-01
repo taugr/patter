@@ -1,5 +1,6 @@
 fn main() {
     println!("cargo:rerun-if-changed=native/main.swift");
+    println!("cargo:rerun-if-changed=native/AudioCapture.swift");
     println!("cargo:rerun-if-changed=Info.plist");
     println!("cargo:rerun-if-changed=native/Info.plist");
     println!("cargo:rerun-if-changed=native/Entitlements.plist");
@@ -20,6 +21,7 @@ fn main() {
         ])
         .arg(cache)
         .arg(root.join("native/main.swift"))
+        .arg(root.join("native/AudioCapture.swift"))
         .args([
             "-Xlinker",
             "-sectcreate",

@@ -162,7 +162,7 @@ fn settings_url(kind: &str) -> Result<&'static str> {
         "microphone" => {
             Ok("x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone")
         }
-        "screen" => {
+        "systemAudio" => {
             Ok("x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")
         }
         _ => Err("Unknown permission setting.".into()),
@@ -196,7 +196,7 @@ mod tests {
             "notifications",
             "accounts",
             "microphone",
-            "screen",
+            "systemAudio",
         ] {
             assert!(settings_url(kind)
                 .unwrap()
@@ -204,5 +204,6 @@ mod tests {
         }
         assert!(settings_url("https://example.com").is_err());
         assert!(settings_url("--args").is_err());
+        assert!(settings_url("screen").is_err());
     }
 }

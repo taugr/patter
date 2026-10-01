@@ -40,6 +40,10 @@ assert(start >= 0 && end > start, 'Recording helper has no embedded Info.plist')
 const helperInfo = plist(embedded.slice(start, end + '</plist>'.length));
 for (const [label, metadata] of [['App', info], ['Recording helper', helperInfo]]) {
   description(metadata, 'NSMicrophoneUsageDescription', label);
-  description(metadata, 'NSScreenCaptureUsageDescription', label);
+  description(metadata, 'NSAudioCaptureUsageDescription', label);
+  assert.equal(metadata.NSScreenCaptureUsageDescription, undefined, `${label}: screen consent must not be requested`);
 }
-console.log('Verified app/helper signatures, Calendar and Audio Input entitlements, and Calendar/Microphone/Screen Capture consent descriptions.');
+const frameworks = exec('/usr/bin/otool', ['-L', helper]);
+assert(frameworks.includes('/CoreAudio.framework/'), 'Capture helper must link Core Audio');
+assert(!frameworks.includes('/ScreenCaptureKit.framework/'), 'Capture helper must not link screen capture');
+console.log('Verified app/helper signatures, Calendar/Audio Input entitlements, audio-only consent descriptions and Core Audio capture without ScreenCaptureKit.');
