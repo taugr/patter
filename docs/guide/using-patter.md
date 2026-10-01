@@ -10,7 +10,7 @@ Use **Export conversation** for a JSON copy of a conversation and its saved hist
 
 ## Recordings and transcription
 
-On launch, the packaged app offers **Set up access** when recording permissions are missing. You can grant access, open macOS settings or choose Later. The check never starts recording. See [permissions and recovery](permissions.md).
+On launch, the packaged app offers **Set up access** when microphone permissions are missing. You can grant access, open macOS settings or choose Later. The check never starts recording. See [permissions and recovery](permissions.md).
 
 Use **Record here** in the selected conversation, **Record…** beside an Upcoming meeting, or the sidebar’s **Record**. The confirmation names the conversation that will receive the audio. Choose **Record a new conversation instead** for a separate note. Use **Stop** when finished; Patter finalizes and saves the recording, then automatically transcribes the new audio and creates a summary using your selected local models and template. Earlier notes, audio and transcript segments are kept. It retains audio chunks and imported originals in its local library; computer-audio capture does not save screen video.
 

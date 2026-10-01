@@ -30,7 +30,15 @@ pub enum MicrophonePermission {
 #[serde(rename_all = "camelCase")]
 pub struct RecordingPermissions {
     microphone: MicrophonePermission,
-    screen_allowed: bool,
+    system_audio: SystemAudioPermission,
+}
+
+// Core Audio has no public, non-prompting consent preflight on macOS 15+.
+// ScreenCapture permission is a different grant, not a fallback for this.
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+#[serde(rename_all = "snake_case")]
+pub enum SystemAudioPermission {
+    ManagedByMacos,
 }
 
 #[tauri::command]
@@ -55,7 +63,7 @@ pub async fn request_capture_permission(
 ) -> Result<()> {
     let mode = match kind.as_str() {
         "microphone" => "request-microphone-access",
-        "screen" => "request-screen-access",
+        "systemAudio" => return Err("macOS checks system audio access when recording starts. Screen recording permission is not needed.".into()),
         _ => return Err("Unknown recording permission.".into()),
     };
     let output = run_helper(app, activity, mode, 120).await?;
@@ -137,13 +145,15 @@ mod tests {
     #[test]
     fn status_requires_explicit_known_values() {
         assert!(serde_json::from_str::<RecordingPermissions>(
-            r#"{"microphone":"denied","screenAllowed":false}"#
+            r#"{"microphone":"denied","systemAudio":"managed_by_macos"}"#
         )
         .is_ok());
         for invalid in [
             r#"{}"#,
             r#"{"microphone":"allowed"}"#,
-            r#"{"microphone":"bad","screenAllowed":true}"#,
+            r#"{"microphone":"bad","systemAudio":"managed_by_macos"}"#,
+            r#"{"microphone":"allowed","systemAudio":"allowed"}"#,
+            r#"{"microphone":"allowed","screenAllowed":false}"#,
         ] {
             assert!(serde_json::from_str::<RecordingPermissions>(invalid).is_err());
         }
@@ -158,5 +168,21 @@ mod tests {
             parse_response(false, br#"{"error":"Allow Microphone access"}"#).unwrap_err(),
             "Allow Microphone access"
         );
+    }
+
+    #[test]
+    fn native_synthetic_audio_finalizes_tracks_and_releases_failed_sessions() {
+        // The helper harness uses generated silence and mock resource handles.
+        // No permission calls, AudioEngine, taps or device capture run here.
+        let helper =
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("resources/patter-native");
+        let output = Command::new(helper).arg("self-test").output().unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let response: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+        assert_eq!(response["status"], "synthetic-tests-passed");
     }
 }

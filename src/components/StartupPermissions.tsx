@@ -148,20 +148,14 @@ export function StartupPermissions({
                       : "Allow"}
                 </button>
               )}
-              {row.id === "screen" && (
-                <button
-                  className="text-button"
-                  disabled={busy}
-                  onClick={() => void act("settings", row.id)}
-                  aria-label="Open settings for Computer audio"
-                >
-                  Open settings
-                </button>
-              )}
             </div>
           </div>
         ))}
       </div>
+      <p className="dialog-intro">
+        macOS checks system audio when recording starts. Screen recording access
+        is not needed.
+      </p>
       <p className="form-message" role="status">
         {busy ? "Waiting for macOS…" : message}
       </p>

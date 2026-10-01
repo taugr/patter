@@ -3,6 +3,7 @@ import {
   useState,
   useEffect,
   useCallback,
+  useMemo,
   useRef,
 } from "react";
 import { invoke } from "@tauri-apps/api/core";
@@ -22,6 +23,7 @@ import {
 } from "../lib/permissions";
 import { zoomLevels } from "../lib/zoom";
 import { Dialog } from "./Dialog";
+import { accessService, type AccessSnapshot } from "../lib/startup-permissions";
 import {
   modelList,
   native,
@@ -94,6 +96,11 @@ export function Settings({
   const [permissionMessage, setPermissionMessage] = useState("");
   const [requestingRecordingAccess, setRequestingRecordingAccess] =
     useState(false);
+  const recordingAccess = useMemo(() => accessService(false, false), []);
+  const [recordingPermission, setRecordingPermission] =
+    useState<AccessSnapshot | null>(null);
+  const [recordingCheckError, setRecordingCheckError] = useState("");
+  const permissionsPending = useRef(false);
   const [calendarPermission, setCalendarPermission] =
     useState<CalendarPermission>(native ? "checking" : "unavailable");
   const [notificationPermission, setNotificationPermission] = useState(
@@ -108,9 +115,12 @@ export function Settings({
   }, [tab]);
   const refreshPermissions = useCallback(async () => {
     if (!native) return;
-    const [calendar, notifications] = await Promise.allSettled([
+    if (permissionsPending.current) return;
+    permissionsPending.current = true;
+    const [calendar, notifications, recording] = await Promise.allSettled([
       invoke<CalendarPermission>("calendar_permission"),
       invoke<string>("notification_permission"),
+      recordingAccess.check(),
     ]);
     setCalendarPermission(
       calendar.status === "fulfilled" ? calendar.value : "unknown",
@@ -120,15 +130,29 @@ export function Settings({
         ? notifications.value
         : "unavailable",
     );
-  }, []);
+    setRecordingPermission(
+      recording.status === "fulfilled" ? recording.value : null,
+    );
+    setRecordingCheckError(
+      recording.status === "rejected"
+        ? `Could not check microphone access: ${String(recording.reason)}`
+        : "",
+    );
+    permissionsPending.current = false;
+  }, [recordingAccess]);
   useEffect(() => {
     void refreshPermissions();
     window.addEventListener("focus", refreshPermissions);
+    const visible = () => {
+      if (!document.hidden) void refreshPermissions();
+    };
+    document.addEventListener("visibilitychange", visible);
     const timer = native
       ? setInterval(() => void refreshPermissions(), 5000)
       : undefined;
     return () => {
       window.removeEventListener("focus", refreshPermissions);
+      document.removeEventListener("visibilitychange", visible);
       clearInterval(timer);
     };
   }, [refreshPermissions]);
@@ -249,16 +273,40 @@ export function Settings({
               </section>
               <section className="settings-section">
                 <h3>Recording</h3>
+                <p role="status">
+                  Microphone:{" "}
+                  {recordingPermission?.microphone.replaceAll("_", " ") ??
+                    (recordingCheckError ? "could not check" : "checking…")}
+                </p>
+                <p>
+                  System audio: macOS checks access when recording starts.
+                  Patter uses <strong>System Audio Recording Only</strong>; no
+                  screen or images are captured. If it is already enabled in
+                  macOS, no screen grant is needed.
+                </p>
                 <button
                   className="secondary"
-                  disabled={!native || busy || installing}
+                  disabled={
+                    !native ||
+                    busy ||
+                    installing ||
+                    recordingPermission?.microphone === "allowed" ||
+                    recordingPermission?.microphone === "restricted"
+                  }
                   onClick={() =>
                     void permissionAction(async () => {
                       setRequestingRecordingAccess(true);
                       try {
-                        await invoke("request_recording_access");
+                        if (recordingPermission?.microphone === "denied") {
+                          await recordingAccess.openSettings("microphone");
+                          setPermissionMessage(
+                            "Return here and click Check again after allowing Microphone in macOS.",
+                          );
+                          return;
+                        }
+                        await recordingAccess.allow("microphone");
                         setPermissionMessage(
-                          "Recording access allowed. If macOS asks you to restart Patter, quit and reopen it.",
+                          "Microphone access allowed. System audio is checked when you start recording. Reopen Patter only if macOS requests it.",
                         );
                       } finally {
                         setRequestingRecordingAccess(false);
@@ -268,7 +316,16 @@ export function Settings({
                 >
                   {requestingRecordingAccess
                     ? "Waiting for macOS…"
-                    : "Enable recording access"}
+                    : recordingPermission?.microphone === "denied"
+                      ? "Open microphone settings"
+                      : "Allow microphone"}
+                </button>
+                <button
+                  className="secondary"
+                  disabled={!native || busy || installing}
+                  onClick={() => void refreshPermissions()}
+                >
+                  Check again
                 </button>
                 <details className="settings-help">
                   <summary>Permissions help</summary>
@@ -286,21 +343,28 @@ export function Settings({
                       className="text-button"
                       disabled={!native || busy}
                       onClick={() =>
-                        openPermissions("screen", setPermissionMessage)
+                        openPermissions("systemAudio", setPermissionMessage)
                       }
                     >
-                      Screen &amp; System Audio <ArrowSquareOut size={14} />
+                      System Audio Recording Only <ArrowSquareOut size={14} />
                     </button>
                   </div>
                   <p>
-                    Grant access without recording. If access was denied, use
-                    the shortcuts above, then reopen Patter. Computer audio uses
-                    Screen &amp; System Audio Recording; no video is saved.
+                    These shortcuts open macOS privacy settings without
+                    recording. For system audio, use the System Audio Recording
+                    Only section within Screen &amp; System Audio Recording.
+                    Return here and click Check again to refresh microphone
+                    status. Reopen Patter only if macOS requests it.
                   </p>
                 </details>
                 {permissionMessage && (
                   <p className="form-message" role="status">
                     {permissionMessage}
+                  </p>
+                )}
+                {recordingCheckError && (
+                  <p className="form-message" role="status">
+                    {recordingCheckError}
                   </p>
                 )}
               </section>

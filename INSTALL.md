@@ -19,7 +19,7 @@ Updates are downloaded over HTTPS, verified against Patter's embedded public key
 
 A consistent database snapshot is retained in the library's `backups/` directory before replacement and schema migrations. It contains conversations, transcripts, versions and settings; original audio stays in `recordings/` and is never modified by the updater. For an independent copy including audio, use Settings → Library → Back up library.
 
-Ad-hoc signing can cause macOS to request app approval or capture/calendar permissions again after an update. Permission continuity has not been proven on a second Mac. Live audio capture and real model inference still need supervised reliability testing.
+Ad-hoc signing changes the app/helper code identity between builds, so macOS can request app approval or microphone/system-audio/calendar permissions again after an update. v0.6.8 removes screen capture and its misleading permission gate, but does not guarantee grant continuity. Stable Developer ID signing requires an Apple signing identity that is not configured in this repository. No permissions are reset or transferred by the updater. In Settings → General → Recording, **Check again** refreshes microphone status. System audio is checked by macOS when recording starts; use **System Audio Recording Only** within the Screen & System Audio Recording page, and reopen Patter only if macOS asks. Live audio capture and real model inference still need supervised reliability testing.
 
 ## Publish a new version
 

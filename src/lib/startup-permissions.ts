@@ -2,10 +2,10 @@ import { invoke } from "@tauri-apps/api/core";
 import type { CalendarPermission } from "./permissions";
 
 export type PermissionId =
-  "microphone" | "screen" | "calendar" | "notifications";
+  "microphone" | "systemAudio" | "calendar" | "notifications";
 export type AccessSnapshot = {
   microphone: "allowed" | "not_requested" | "denied" | "restricted" | "unknown";
-  screenAllowed: boolean;
+  systemAudio: "managed_by_macos";
   calendar?: CalendarPermission;
   notifications?: string;
 };
@@ -34,13 +34,8 @@ export function missingAccess(s: AccessSnapshot): AccessRow[] {
               ? "allow"
               : "check",
     });
-  if (!s.screenAllowed)
-    rows.push({
-      id: "screen",
-      label: "Computer audio",
-      detail: "Uses Screen & System Audio Recording. No video is saved.",
-      action: "allow",
-    });
+  // macOS checks Core Audio consent at recording start. A missing screen
+  // grant says nothing about system audio and must not create an Allow loop.
   if (s.calendar && s.calendar !== "allowed")
     rows.push({
       id: "calendar",
@@ -74,15 +69,26 @@ export interface AccessService {
   allow(id: PermissionId): Promise<void>;
   openSettings(id: PermissionId): Promise<void>;
 }
+// Coalesce only in-flight work across Settings/startup/StrictMode. Never cache
+// a settled status: every focus/Check again reads the current macOS grant.
+let pendingRecordingCheck: Promise<AccessSnapshot | null> | undefined;
+let pendingPermissionRequest: Promise<void> | undefined;
+function recordingPreflight() {
+  return (pendingRecordingCheck ??= (async () => {
+    if (pendingPermissionRequest)
+      await pendingPermissionRequest.catch(() => {});
+    return invoke<AccessSnapshot | null>("recording_permissions");
+  })().finally(() => {
+    pendingRecordingCheck = undefined;
+  }));
+}
 export function accessService(
   calendar: boolean,
   notifications: boolean,
 ): AccessService {
   let checking: Promise<AccessSnapshot | null> | undefined;
   async function read() {
-    const recording = await invoke<AccessSnapshot | null>(
-      "recording_permissions",
-    );
+    const recording = await recordingPreflight();
     if (!recording) return null; // Unpackaged development builds cannot own consent.
     const [calendarStatus, notificationStatus] = await Promise.all([
       calendar ? invoke<CalendarPermission>("calendar_permission") : undefined,
@@ -101,13 +107,33 @@ export function accessService(
         checking = undefined;
       })),
     async allow(id) {
-      // Finish an in-flight preflight before starting a consent helper.
-      await checking?.catch(() => {});
-      if (id === "calendar") await invoke("calendar_events");
-      else if (id === "notifications") {
-        if (!(await invoke<boolean>("request_reminder_permission")))
-          throw new Error("Allow Patter in macOS Notification settings.");
-      } else await invoke("request_capture_permission", { kind: id });
+      if (id === "systemAudio")
+        throw new Error(
+          "macOS checks system audio when recording starts. Screen recording is not needed.",
+        );
+      if (pendingPermissionRequest)
+        throw new Error(
+          "A permission request is already open. Finish it first.",
+        );
+      // Capture existing reads before publishing the request. New reads wait
+      // for consent to finish; old reads finish first without a circular wait.
+      const existingCheck = checking;
+      const existingRecordingCheck = pendingRecordingCheck;
+      const request = (async () => {
+        await existingCheck?.catch(() => {});
+        await existingRecordingCheck?.catch(() => {});
+        if (id === "calendar") await invoke("calendar_events");
+        else if (id === "notifications") {
+          if (!(await invoke<boolean>("request_reminder_permission")))
+            throw new Error("Allow Patter in macOS Notification settings.");
+        } else await invoke("request_capture_permission", { kind: id });
+      })();
+      pendingPermissionRequest = request;
+      try {
+        await request;
+      } finally {
+        pendingPermissionRequest = undefined;
+      }
     },
     openSettings: (kind) => invoke("open_permission_settings", { kind }),
   };
