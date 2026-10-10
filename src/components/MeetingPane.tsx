@@ -242,15 +242,17 @@ export function MeetingPane({
             <p>
               <strong>
                 {freshness === "changed"
-                  ? "Source changed since this summary"
+                  ? "Source changed. Regenerate to update."
                   : "Summary source is unknown"}
               </strong>
-              <br />
-              {freshness === "changed"
-                ? "Review the saved summary, decisions and next steps, or regenerate from the current notes and transcript."
-                : "The original summary input could not be verified. Review the saved content or regenerate to record its source."}{" "}
-              Regeneration replaces generated content; previous versions are
-              kept.
+              {freshness === "unknown" && (
+                <>
+                  <br />
+                  The original summary input could not be verified. Review the
+                  saved content or regenerate to record its source. Regeneration
+                  replaces generated content; previous versions are kept.
+                </>
+              )}
             </p>
             <button
               className="secondary"
