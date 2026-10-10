@@ -10,6 +10,73 @@ import {
 } from "./storage";
 import { matchesSearch, newMeeting, type Preferences } from "./types";
 import { effectiveTemplate, templateInstructions } from "./templates";
+import { summaryFreshness } from "./summary-input";
+
+describe("summary source history", () => {
+  it("resolves the original source across saves, reloads, copies and unknown legacy provenance", async () => {
+    const original = await saveMeeting({
+      ...newMeeting("Friday review"),
+      notes: "The review is Friday.",
+    });
+    const summary = await saveMeeting({
+      ...original,
+      summary: "Review Friday.",
+      decisions: ["Review Friday."],
+      actions: [{ id: "fixed", text: "Prepare Friday", done: true }],
+      summarySource: {
+        templateId: "general",
+        templateName: "General",
+        instructions: "Fixed",
+        extraInstructions: "",
+        model: "injected",
+        generatedAt: "2026-10-10T00:00:00Z",
+        sourceConversationId: original.id,
+        sourceRevision: original.revision,
+        inputProjectionVersion: 1,
+      },
+    });
+    expect(summaryFreshness(summary)).toBe("current");
+    const monday = await saveMeeting({
+      ...summary,
+      notes: "The review is Monday.",
+      summaryInput: { projectionVersion: 1, text: "forged" },
+    });
+    expect(summaryFreshness(monday)).toBe("changed");
+    expect(monday.actions).toEqual(summary.actions);
+    expect(
+      summaryFreshness(
+        (await listMeetings()).find((m) => m.id === original.id)!,
+      ),
+    ).toBe("changed");
+    const copy = await saveMeeting({
+      ...monday,
+      id: crypto.randomUUID(),
+      revision: 0,
+      title: "Draft copy",
+    });
+    expect(copy.summaryInput).toEqual(summary.summaryInput);
+    expect(copy.summarySource?.sourceConversationId).toBe(original.id);
+    const restored = await saveMeeting({
+      ...summary,
+      revision: monday.revision,
+    });
+    expect(summaryFreshness(restored)).toBe("current");
+    const missing = await saveMeeting({
+      ...restored,
+      summarySource: { ...summary.summarySource!, sourceRevision: 999 },
+    });
+    expect(summaryFreshness(missing)).toBe("unknown");
+    const legacy = await saveMeeting({
+      ...newMeeting(),
+      summary: "Old summary",
+    });
+    expect(summaryFreshness(legacy)).toBe("unknown");
+    expect(
+      (await history(original.id)).find((m) => m.revision === summary.revision)
+        ?.summaryFreshness,
+    ).toBe("current");
+  });
+});
 
 describe("summary templates", () => {
   it("upgrades legacy preferences and persists edited templates and conversation overrides", async () => {

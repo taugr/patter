@@ -61,21 +61,7 @@ pub async fn summarize(meeting: &Value, preferences: &Value) -> Result<Value> {
         .as_str()
         .filter(|s| !s.is_empty())
         .ok_or("Choose a summary model in Settings first.")?;
-    let transcript = meeting["transcript"]
-        .as_array()
-        .map(|a| {
-            a.iter()
-                .filter_map(|s| s["text"].as_str())
-                .collect::<Vec<_>>()
-                .join("\n")
-        })
-        .unwrap_or_default();
-    let input = format!(
-        "Meeting: {}\nNotes:\n{}\nTranscript:\n{}",
-        meeting["title"].as_str().unwrap_or(""),
-        meeting["notes"].as_str().unwrap_or(""),
-        transcript
-    );
+    let input = crate::summary_input::project(meeting);
     if input.trim().len() < 30 {
         return Err("Add notes or a transcript first.".into());
     }

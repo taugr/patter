@@ -15,6 +15,7 @@ import { AudioPlayer } from "./AudioPlayer";
 import { SummaryOptions } from "./SummaryOptions";
 import type { Meeting, Preferences } from "../lib/types";
 import { formatTime } from "../lib/types";
+import { summaryFreshness } from "../lib/summary-input";
 export function MeetingPane({
   meeting,
   preferences,
@@ -53,6 +54,7 @@ export function MeetingPane({
   joinUrl?: string | null;
 }) {
   const [tab, setTab] = useState("overview");
+  const freshness = summaryFreshness(meeting);
   const [seek, setSeek] = useState<{
     time: number;
     speaker?: string;
@@ -234,6 +236,30 @@ export function MeetingPane({
             onUpdate={onUpdate}
             busy={!!busy}
           />
+        )}
+        {tab === "overview" && freshness && freshness !== "current" && (
+          <div className="info-box" role="status">
+            <p>
+              <strong>
+                {freshness === "changed"
+                  ? "Source changed since this summary"
+                  : "Summary source is unknown"}
+              </strong>
+              <br />
+              {freshness === "changed"
+                ? "Review the saved summary, decisions and next steps, or regenerate from the current notes and transcript."
+                : "The original summary input could not be verified. Review the saved content or regenerate to record its source."}{" "}
+              Regeneration replaces generated content; previous versions are
+              kept.
+            </p>
+            <button
+              className="secondary"
+              disabled={!!busy}
+              onClick={onSummarize}
+            >
+              <Sparkle size={18} /> Regenerate summary
+            </button>
+          </div>
         )}
         {tab === "overview" ? (
           meeting.summary ? (

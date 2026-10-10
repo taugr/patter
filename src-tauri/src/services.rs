@@ -66,6 +66,13 @@ pub fn finish(
     if job.kind == "summary" {
         meeting["summary"] = generated["summary"].clone();
         meeting["summarySource"] = generated["summarySource"].clone();
+        if !meeting["summarySource"].is_object() {
+            meeting["summarySource"] = json!({});
+        }
+        // Capture the exact prepared job, never the new summary's save revision.
+        meeting["summarySource"]["sourceConversationId"] = job.meeting["id"].clone();
+        meeting["summarySource"]["sourceRevision"] = job.meeting["revision"].clone();
+        meeting["summarySource"]["inputProjectionVersion"] = json!(crate::summary_input::VERSION);
         meeting["decisions"] = generated["decisions"].clone();
         meeting["actions"] = json!(generated["actions"]
             .as_array()
@@ -80,3 +87,7 @@ pub fn finish(
     let mut db = lib.db.lock().map_err(|_| "Library lock failed")?;
     store::save_checked_attributed(&mut db, meeting, agent)
 }
+
+#[cfg(test)]
+#[path = "services_tests.rs"]
+mod tests;

@@ -32,7 +32,13 @@ export interface Meeting {
     extraInstructions: string;
     model: string;
     generatedAt: string;
+    sourceConversationId?: string;
+    sourceRevision?: number;
+    inputProjectionVersion?: number;
   };
+  // Resolved from immutable history on read/save, never persisted as source provenance.
+  summaryInput?: { projectionVersion: number; text: string };
+  summaryFreshness?: "current" | "changed" | "unknown";
   decisions: string[];
   actions: ActionItem[];
   transcript: Segment[];

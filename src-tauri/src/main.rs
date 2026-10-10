@@ -12,6 +12,7 @@ mod recording_processing;
 mod reminders;
 mod services;
 mod store;
+mod summary_input;
 mod templates;
 mod transcription;
 mod transcription_models;
@@ -86,8 +87,12 @@ fn meeting_history(lib: State<Library>, id: String) -> Result<Vec<Value>> {
     let rows = s
         .query_map([id], |r| r.get::<_, String>(0))
         .map_err(|e| e.to_string())?;
-    rows.map(|r| serde_json::from_str(&r.map_err(|e| e.to_string())?).map_err(|e| e.to_string()))
-        .collect()
+    rows.map(|r| {
+        let meeting =
+            serde_json::from_str(&r.map_err(|e| e.to_string())?).map_err(|e| e.to_string())?;
+        Ok(summary_input::annotate(&db, meeting))
+    })
+    .collect()
 }
 #[tauri::command]
 fn get_preferences(lib: State<Library>) -> Result<Value> {

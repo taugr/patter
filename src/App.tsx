@@ -16,6 +16,7 @@ import {
   type ReminderState,
 } from "./components/MeetingReminders";
 import { useZoom } from "./lib/use-zoom";
+import { mergeSavedMeeting } from "./lib/summary-input";
 import { Sidebar } from "./components/Sidebar";
 import { MeetingPane } from "./components/MeetingPane";
 import { Dialog } from "./components/Dialog";
@@ -166,12 +167,13 @@ export default function App() {
       try {
         const saved = await storage.saveMeeting(m);
         const queued = pending.current as Meeting | null;
-        if (queued?.id === saved.id && queued.revision === m.revision)
+        if (queued?.id === saved.id && queued.revision === m.revision) {
           queued.revision = saved.revision;
+          queued.summaryInput = saved.summaryInput;
+          queued.summaryFreshness = saved.summaryFreshness;
+        }
         const next = meetingsRef.current.map((x) =>
-          x.id === saved.id && x.revision === m.revision
-            ? { ...x, revision: saved.revision }
-            : x,
+          mergeSavedMeeting(x, saved, m.revision),
         );
         meetingsRef.current = next;
         setMeetings(next);

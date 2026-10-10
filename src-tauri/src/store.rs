@@ -70,7 +70,8 @@ pub fn load(db: &Connection, id: &str) -> Result<Value> {
     let text: String = db
         .query_row("SELECT data FROM meetings WHERE id=?", [id], |r| r.get(0))
         .map_err(|e| e.to_string())?;
-    serde_json::from_str(&text).map_err(|e| e.to_string())
+    let meeting = serde_json::from_str(&text).map_err(|e| e.to_string())?;
+    Ok(crate::summary_input::annotate(db, meeting))
 }
 /// Callers hold the library mutex across validation and commit.
 pub fn save_checked(db: &mut Connection, data: Value) -> Result<Value> {
@@ -96,6 +97,7 @@ fn save_attributed(
     attribution: Option<Value>,
     expected: Option<i64>,
 ) -> Result<Value> {
+    crate::summary_input::clear_derived(&mut data);
     if let Some(object) = data.as_object_mut() {
         object.remove("agentChange");
     }
@@ -153,7 +155,7 @@ fn save_attributed(
     .map_err(|e| e.to_string())?;
     tx.execute("INSERT INTO meetings(id,data) VALUES(?,?) ON CONFLICT(id) DO UPDATE SET data=excluded.data", params![id, text]).map_err(|e| e.to_string())?;
     tx.commit().map_err(|e| e.to_string())?;
-    Ok(data)
+    Ok(crate::summary_input::annotate(db, data))
 }
 pub fn all(db: &Connection) -> Result<Vec<Value>> {
     let mut s = db
@@ -162,8 +164,12 @@ pub fn all(db: &Connection) -> Result<Vec<Value>> {
     let rows = s
         .query_map([], |r| r.get::<_, String>(0))
         .map_err(|e| e.to_string())?;
-    rows.map(|r| serde_json::from_str(&r.map_err(|e| e.to_string())?).map_err(|e| e.to_string()))
-        .collect()
+    rows.map(|r| {
+        let meeting =
+            serde_json::from_str(&r.map_err(|e| e.to_string())?).map_err(|e| e.to_string())?;
+        Ok(crate::summary_input::annotate(db, meeting))
+    })
+    .collect()
 }
 pub fn preferences(db: &Connection) -> Result<Value> {
     let raw = db.query_row("SELECT data FROM preferences WHERE id=1", [], |r| {
@@ -226,7 +232,12 @@ mod tests {
                 |r| r.get(0),
             )
             .unwrap();
-        assert_eq!(serde_json::from_str::<Value>(&retained).unwrap(), first);
+        let mut original_data = first.clone();
+        crate::summary_input::clear_derived(&mut original_data);
+        assert_eq!(
+            serde_json::from_str::<Value>(&retained).unwrap(),
+            original_data
+        );
         assert_eq!(load(&db, first["id"].as_str().unwrap()).unwrap(), latest);
     }
     #[test]

@@ -24,6 +24,10 @@ Test a short disposable recording and playback before an important meeting. Live
 
 Connect a local OpenAI-compatible model server under **Settings → Models → Summaries**, then use **Summary → Create summary**. Choose default template guidance in Settings or expand **Template** in a conversation to override it. [Summary setup](models.md#connect-a-summary-model) explains local server addresses, templates and preserved generated versions.
 
+Overview shows **Source changed since this summary** when the title, notes or transcript text differs from the input used for the saved summary. The summary, decisions and completed next steps stay available until you choose **Regenerate summary**. The notice remains after reopening the conversation. Action completion, archive state, transcript timings/speaker labels and template settings alone do not mark the source changed.
+
+Older summaries without a verifiable source version show **Summary source is unknown**. Regeneration records a source version for the new result; failed generation keeps the previous content and notice. Explicit regeneration replaces generated content, including next steps, while previous versions and their completed actions remain in history. Source comparison checks input equality, not summary accuracy or whether all audio has been transcribed.
+
 Connect calendars already present in Apple Calendar, including a Google account added to macOS Internet Accounts. Upcoming events can open notes, and Google Meet or Zoom events can offer **Join**. Configure reminder timing, sound, title visibility and calendars under **Settings → Calendar**. Patter must remain open to send reminders. [Calendar and meetings](calendar.md) explains linking, joining and recording from reminders.
 
 ## Zoom and keyboard shortcuts

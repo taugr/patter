@@ -7,6 +7,11 @@ import {
   type CalendarEvent,
 } from "./types";
 import { samples } from "./samples";
+import {
+  summaryFreshness,
+  summaryInput,
+  summaryInputVersion,
+} from "./summary-input";
 export const native = isTauri();
 let database: Promise<IDBDatabase> | undefined;
 function db() {
@@ -46,6 +51,34 @@ async function put(store: string, data: unknown, key?: IDBValidKey) {
   });
 }
 let queue = Promise.resolve();
+async function withSummaryInput(meeting: Meeting): Promise<Meeting> {
+  const resolved = { ...meeting };
+  delete resolved.summaryInput;
+  delete resolved.summaryFreshness;
+  const source = meeting.summarySource;
+  if (
+    meeting.summary &&
+    source?.inputProjectionVersion === summaryInputVersion &&
+    source.sourceConversationId &&
+    Number.isInteger(source.sourceRevision) &&
+    source.sourceRevision! > 0
+  ) {
+    const original = await read<Meeting | undefined>("versions", [
+      source.sourceConversationId,
+      source.sourceRevision!,
+    ]).catch(() => undefined);
+    if (
+      original?.id === source.sourceConversationId &&
+      original.revision === source.sourceRevision
+    )
+      resolved.summaryInput = {
+        projectionVersion: summaryInputVersion,
+        text: summaryInput(original),
+      };
+  }
+  resolved.summaryFreshness = summaryFreshness(resolved);
+  return resolved;
+}
 function serial<T>(fn: () => Promise<T>): Promise<T> {
   const task = queue.then(fn);
   queue = task.then(
@@ -63,15 +96,17 @@ export async function listMeetings(): Promise<Meeting[]> {
     }
     await put("settings", true, "seeded");
   }
-  return (await read<Meeting[]>("meetings")).sort((a, b) =>
-    b.createdAt.localeCompare(a.createdAt),
+  return Promise.all(
+    (await read<Meeting[]>("meetings"))
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .map(withSummaryInput),
   );
 }
 export function saveMeeting(meeting: Meeting): Promise<Meeting> {
   return serial(async () => {
     if (native) return invoke("save_meeting", { meeting });
     const d = await db();
-    return new Promise((resolve, reject) => {
+    const result = await new Promise<Meeting>((resolve, reject) => {
       const tx = d.transaction(["meetings", "versions"], "readwrite");
       const current = tx.objectStore("meetings").get(meeting.id);
       let saved: Meeting;
@@ -96,6 +131,8 @@ export function saveMeeting(meeting: Meeting): Promise<Meeting> {
           ],
           revision: (old?.revision ?? 0) + 1,
         };
+        delete saved.summaryInput;
+        delete saved.summaryFreshness;
         tx.objectStore("meetings").put(saved);
         tx.objectStore("versions").put(saved);
       };
@@ -103,14 +140,18 @@ export function saveMeeting(meeting: Meeting): Promise<Meeting> {
       tx.onerror = () => reject(tx.error);
       tx.onabort = () => reject(tx.error ?? new Error("Save interrupted"));
     });
+    return withSummaryInput(result);
   });
 }
 export async function history(id: string): Promise<Meeting[]> {
   return native
     ? invoke("meeting_history", { id })
-    : (await read<Meeting[]>("versions"))
-        .filter((m) => m.id === id)
-        .sort((a, b) => b.revision - a.revision);
+    : Promise.all(
+        (await read<Meeting[]>("versions"))
+          .filter((m) => m.id === id)
+          .sort((a, b) => b.revision - a.revision)
+          .map(withSummaryInput),
+      );
 }
 export async function getPreferences(): Promise<Preferences> {
   const saved = native

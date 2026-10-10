@@ -228,6 +228,7 @@ fn library_call(lib: &Library, access: &Access, tool: &str, args: Value) -> Resu
             } else {
                 store::load(&db, &a.id)?
             };
+            let m = crate::summary_input::annotate(&db, m);
             let (offset, limit) = page(
                 a.offset,
                 a.limit,
@@ -246,7 +247,7 @@ fn library_call(lib: &Library, access: &Access, tool: &str, args: Value) -> Resu
                     (json!(rows.iter().skip(offset).take(limit).map(|r|json!({"start":r["start"],"speaker":r["speaker"],"text":r["text"]})).collect::<Vec<_>>()),rows.len())
                 }
                 "overview" => (
-                    json!({"createdAt":m["createdAt"],"duration":m["duration"],"archived":m["archived"],"actions":m["actions"],"decisions":m["decisions"],"summarySource":m["summarySource"],"recordingCount":m["recordings"].as_array().map_or(0,Vec::len),"agentChange":m["agentChange"]}),
+                    json!({"createdAt":m["createdAt"],"duration":m["duration"],"archived":m["archived"],"actions":m["actions"],"decisions":m["decisions"],"summarySource":m["summarySource"],"summaryFreshness":m["summaryFreshness"],"recordingCount":m["recordings"].as_array().map_or(0,Vec::len),"agentChange":m["agentChange"]}),
                     0,
                 ),
                 _ => return Err("Choose overview, notes, summary or transcript.".into()),
