@@ -49,6 +49,15 @@ async fn complete(base: &str, model: &str, system: &str, text: &str) -> Result<S
         ));
     }
     let v: Value = response.json().await.map_err(|e| e.to_string())?;
+    match v["choices"][0]["finish_reason"].as_str() {
+        Some("length") => {
+            return Err("The local model stopped before completing the summary. Your previous summary is kept. Try again with a higher output limit or a different local model.".into());
+        }
+        Some("content_filter") => {
+            return Err("The local model filtered part of its response. Your previous summary is kept. Review your local model settings or try a different model.".into());
+        }
+        _ => {}
+    }
     v["choices"][0]["message"]["content"]
         .as_str()
         .map(str::to_owned)
@@ -123,6 +132,9 @@ fn parse_summary(text: &str) -> Result<Value> {
     }
     Ok(parsed)
 }
+#[cfg(test)]
+#[path = "models_completion_tests.rs"]
+mod completion_tests;
 #[cfg(test)]
 mod tests {
     use super::*;
