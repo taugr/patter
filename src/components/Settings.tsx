@@ -36,11 +36,6 @@ import { TranscriptionSettings } from "./TranscriptionSettings";
 import { AgentSettings } from "./AgentSettings";
 import { BackupSettings } from "./BackupSettings";
 import { AnarlogImport } from "./AnarlogImport";
-import {
-  instructionLimit,
-  summaryTemplates,
-  templateInstructions,
-} from "../lib/templates";
 const settingsTabs = [
   { id: "general", label: "General", icon: GearSix },
   { id: "calendar", label: "Calendar", icon: CalendarBlank },
@@ -633,6 +628,11 @@ export function Settings({
               />
               <section className="settings-section">
                 <h3>Summaries</h3>
+                <p>
+                  Every summary groups the discussion by topic, followed by
+                  Action items. Owners and deadlines appear only when stated in
+                  the conversation.
+                </p>
 
                 <label>
                   Local server
@@ -691,63 +691,6 @@ export function Settings({
                     Studio uses port 1234; Ollama uses 11434. Include /v1 in the
                     address.
                   </p>
-                </details>
-              </section>
-              <section className="settings-section">
-                <h3>Templates</h3>
-
-                <label>
-                  Default
-                  <select
-                    value={draft.summaryTemplate}
-                    onChange={(e) =>
-                      setDraft({ ...draft, summaryTemplate: e.target.value })
-                    }
-                  >
-                    {summaryTemplates.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <details className="settings-help">
-                  <summary>Edit instructions</summary>
-                  <label>
-                    Instructions
-                    <textarea
-                      rows={5}
-                      maxLength={instructionLimit}
-                      value={templateInstructions(draft.summaryTemplate, draft)}
-                      onChange={(e) =>
-                        setDraft({
-                          ...draft,
-                          templateInstructions: {
-                            ...draft.templateInstructions,
-                            [draft.summaryTemplate]: e.target.value,
-                          },
-                        })
-                      }
-                    />
-                  </label>
-                  <button
-                    className="text-button"
-                    type="button"
-                    disabled={
-                      draft.templateInstructions[draft.summaryTemplate] ===
-                      undefined
-                    }
-                    onClick={() => {
-                      const instructions = { ...draft.templateInstructions };
-                      delete instructions[draft.summaryTemplate];
-                      setDraft({
-                        ...draft,
-                        templateInstructions: instructions,
-                      });
-                    }}
-                  >
-                    Reset instructions
-                  </button>
                 </details>
               </section>
             </div>

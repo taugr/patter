@@ -800,7 +800,6 @@ export default function App() {
               ? (linkedEvent.joinUrl ?? linkedEvent.url ?? null)
               : undefined
           }
-          preferences={preferences}
           onUpdate={update}
           saving={saving}
           activeRecording={recording === selected.id}

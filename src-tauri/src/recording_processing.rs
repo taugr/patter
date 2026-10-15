@@ -231,7 +231,9 @@ mod tests {
         json!([{"start":8,"text":"This synthetic transcript contains enough useful detail to summarize the meeting. We reviewed the recording flow and calendar refresh, agreed to preserve earlier notes, and assigned concrete follow up actions."}])
     }
     fn summary() -> Value {
-        json!({"summary":"Fixture summary","decisions":["Keep notes"],"actions":["Verify refresh"],"summarySource":{"model":"fixture"}})
+        let mut generated = crate::summary_format::parse(r#"{"summary":[{"topic":"Recording flow","text":"Earlier notes are kept."}],"actions":["Verify refresh"]}"#).unwrap();
+        generated["summarySource"] = crate::summary_format::canonical().source();
+        generated
     }
     #[tokio::test]
     async fn final_audio_transcribes_before_summary_and_repeat_request_is_noop() {
@@ -259,6 +261,11 @@ mod tests {
         .await
         .unwrap();
         assert_eq!(*steps.lock().unwrap(), ["transcript", "summary"]);
+        assert_eq!(saved["summarySource"]["summaryFormatVersion"], 1);
+        assert_eq!(
+            saved["summary"],
+            "### Recording flow\nEarlier notes are kept."
+        );
         assert_eq!(saved["eventId"], "fixture-event");
         assert_eq!(saved["archived"], true);
         assert_eq!(saved["notes"], "Keep notes");

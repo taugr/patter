@@ -64,7 +64,7 @@ async fn complete(base: &str, model: &str, system: &str, text: &str) -> Result<S
         .ok_or("The local model returned no text".into())
 }
 pub async fn summarize(meeting: &Value, preferences: &Value) -> Result<Value> {
-    let template = crate::templates::resolve(meeting, preferences)?;
+    let format = crate::summary_format::canonical();
     let base = local_url(preferences["endpoint"].as_str().unwrap_or(""))?;
     let model = preferences["model"]
         .as_str()
@@ -78,7 +78,7 @@ pub async fn summarize(meeting: &Value, preferences: &Value) -> Result<Value> {
     let mut summaries = Vec::new();
     if chars.len() > 12000 {
         for chunk in chars.chunks(10000) {
-            summaries.push(complete(&base,model,&template.prompt("Summarize this portion of meeting notes, preserving details relevant to the template, decisions, action items and uncertainty."),&chunk.iter().collect::<String>()).await?);
+            summaries.push(complete(&base,model,&format.prompt("Summarize this portion of meeting notes, preserving every discussed topic, decisions, supported action items, explicit owners/deadlines and uncertainty. Do not infer commitments."),&chunk.iter().collect::<String>()).await?);
         }
     } else {
         summaries.push(input)
@@ -90,7 +90,7 @@ pub async fn summarize(meeting: &Value, preferences: &Value) -> Result<Value> {
         let c: Vec<char> = combined.chars().collect();
         let mut reduced = Vec::new();
         for chunk in c.chunks(10000) {
-            reduced.push(complete(&base,model,&template.prompt("Condense these meeting summaries into at most 500 words while preserving template-relevant details, decisions and action items."),&chunk.iter().collect::<String>()).await?)
+            reduced.push(complete(&base,model,&format.prompt("Condense these meeting summaries into at most 500 words while preserving every discussed topic, decisions, supported action items, explicit owners/deadlines and uncertainty. Do not infer commitments."),&chunk.iter().collect::<String>()).await?)
         }
         combined = reduced.join("\n");
         rounds += 1;
@@ -100,37 +100,13 @@ pub async fn summarize(meeting: &Value, preferences: &Value) -> Result<Value> {
             "The model could not condense this meeting enough. Try a different local model.".into(),
         );
     }
-    let text=complete(&base,model,&template.prompt("Return only a JSON object with summary (string), decisions (array of strings), and actions (array of strings). Use empty arrays when no decisions or actions were agreed. No markdown fences."),&combined).await?;
-    let mut generated = parse_summary(&text)?;
-    let mut source = serde_json::to_value(&template).map_err(|e| e.to_string())?;
+    let text = complete(&base, model, &format.final_prompt(), &combined).await?;
+    let mut generated = crate::summary_format::parse(&text)?;
+    let mut source = format.source();
     source["model"] = json!(model);
     source["generatedAt"] = json!(chrono::Utc::now().to_rfc3339());
     generated["summarySource"] = source;
     Ok(generated)
-}
-fn parse_summary(text: &str) -> Result<Value> {
-    let start = text
-        .find('{')
-        .ok_or("The model did not return a structured summary. Try another model.")?;
-    let end = text
-        .rfind('}')
-        .ok_or("The model returned incomplete JSON.")?;
-    if end < start {
-        return Err("The model returned invalid JSON.".into());
-    }
-    let parsed: Value = serde_json::from_str(&text[start..=end])
-        .map_err(|_| "The model returned invalid summary JSON. Your original content is kept.")?;
-    if !parsed["summary"].is_string()
-        || !parsed["decisions"]
-            .as_array()
-            .is_some_and(|items| items.iter().all(Value::is_string))
-        || !parsed["actions"]
-            .as_array()
-            .is_some_and(|items| items.iter().all(Value::is_string))
-    {
-        return Err("The model returned an unsupported summary format.".into());
-    }
-    Ok(parsed)
 }
 #[cfg(test)]
 #[path = "models_completion_tests.rs"]
@@ -139,7 +115,7 @@ mod completion_tests;
 mod tests {
     use super::*;
     #[test]
-    fn long_transcripts_use_the_template_at_every_stage_and_record_its_source() {
+    fn long_transcripts_use_the_unified_format_at_every_stage_and_ignore_legacy_guidance() {
         use std::io::{BufRead, BufReader, Read, Write};
         use std::net::TcpListener;
         use std::time::{Duration, Instant};
@@ -184,7 +160,7 @@ mod tests {
                 reader.read_exact(&mut body).unwrap();
                 requests.push(serde_json::from_slice::<Value>(&body).unwrap());
                 let content = if requests.len() == 3 {
-                    r#"{"summary":"Inclusive interface ideas.","decisions":[],"actions":[]}"#
+                    r#"{"summary":[{"topic":"Interface access","text":"Inclusive interface ideas."}],"actions":[]}"#
                 } else {
                     "Several accessible interface options remain open."
                 };
@@ -199,8 +175,9 @@ mod tests {
         let requests = requests.join().unwrap();
         for request in &requests {
             let system = request["messages"][0]["content"].as_str().unwrap();
-            assert!(system.contains("Preserve alternative designs."));
-            assert!(system.contains("Focus on accessibility."));
+            assert!(!system.contains("Preserve alternative designs."));
+            assert!(system.contains("meaningful topic subsections"));
+            assert!(!system.contains("Focus on accessibility."));
             assert!(system.contains("untrusted source data"));
             assert!(!system.contains("We discussed an inclusive interface."));
         }
@@ -208,27 +185,15 @@ mod tests {
             .as_str()
             .unwrap()
             .contains("JSON object"));
-        assert_eq!(generated["summary"], "Inclusive interface ideas.");
-        assert_eq!(generated["summarySource"]["templateId"], "brainstorm");
         assert_eq!(
-            generated["summarySource"]["instructions"],
-            "Preserve alternative designs."
+            generated["summary"],
+            "### Interface access\nInclusive interface ideas."
         );
-        assert_eq!(
-            generated["summarySource"]["extraInstructions"],
-            "Focus on accessibility."
-        );
+        assert_eq!(generated["summarySource"]["templateId"], "unified");
+        assert_eq!(generated["summarySource"]["summaryFormatVersion"], 1);
+        assert_eq!(generated["summarySource"]["extraInstructions"], "");
         assert_eq!(generated["summarySource"]["model"], "fixture-model");
         assert!(generated["summarySource"]["generatedAt"].is_string());
-    }
-    #[test]
-    fn invalid_model_output_is_rejected_before_saving() {
-        assert!(
-            parse_summary(r#"{"summary":"ok","decisions":[{"bad":"object"}],"actions":[]}"#)
-                .is_err()
-        );
-        assert!(parse_summary("unfinished {no JSON").is_err());
-        assert_eq!(parse_summary("```json\n{\"summary\":\"ok\",\"decisions\":[],\"actions\":[\"Review notes\"]}\n```").unwrap()["summary"], "ok");
     }
     #[test]
     fn only_loopback() {

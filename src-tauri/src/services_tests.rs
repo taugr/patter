@@ -243,3 +243,77 @@ fn copies_and_restores_resolve_the_original_source_conversation() {
         original["revision"]
     );
 }
+
+#[test]
+fn unified_generation_preserves_legacy_configuration_records_and_historical_exports() {
+    let lib = library();
+    let fresh = store::preferences(&lib.db.lock().unwrap()).unwrap();
+    assert_eq!(fresh["model"], "");
+    assert!(fresh["summaryTemplate"].is_null());
+    let mut old = fixture(&lib);
+    old["summary"] = json!("Original custom summary");
+    old["summaryTemplate"] = json!("no-longer-known");
+    old["summaryInstructions"] = json!("x".repeat(5000));
+    old["summarySource"] = json!({"templateId":"custom","instructions":"Historic custom guidance"});
+    old["actions"] = json!([{"id":"old-action","text":"Old task","done":true}]);
+    old["recordings"] = json!([{"id":"retained","path":"/synthetic/original.wav"}]);
+    let old = save(&lib, old);
+    let prefs = json!({"summaryTemplate":"custom","templateInstructions":{"custom":"x".repeat(5000)},"model":"fixture"});
+    lib.db
+        .lock()
+        .unwrap()
+        .execute(
+            "INSERT INTO preferences(id,data) VALUES(1,?)",
+            [prefs.to_string()],
+        )
+        .unwrap();
+    let job = prepare(
+        &lib,
+        old["id"].as_str().unwrap(),
+        "summary",
+        Some("interview"),
+    )
+    .unwrap();
+    assert_eq!(job.meeting["summaryTemplate"], old["summaryTemplate"]);
+    let mut result = crate::summary_format::parse(
+        r#"{"summary":[{"topic":"Review","text":"The review remains open."}],"actions":[]}"#,
+    )
+    .unwrap();
+    result["summarySource"] = crate::summary_format::canonical().source();
+    let saved = finish(&lib, &job, result, None).unwrap();
+    assert_eq!(saved["summary"], "### Review\nThe review remains open.");
+    assert_eq!(saved["summarySource"]["summaryFormatVersion"], 1);
+    for field in [
+        "summaryTemplate",
+        "summaryInstructions",
+        "notes",
+        "transcript",
+        "recordings",
+    ] {
+        assert_eq!(saved[field], old[field], "Lost legacy {field}");
+    }
+    let db = lib.db.lock().unwrap();
+    assert_eq!(store::preferences(&db).unwrap(), prefs);
+    let historic: String = db
+        .query_row(
+            "SELECT data FROM versions WHERE id=? AND revision=?",
+            rusqlite::params![
+                old["id"].as_str().unwrap(),
+                old["revision"].as_i64().unwrap()
+            ],
+            |row| row.get(0),
+        )
+        .unwrap();
+    let retained: Value = serde_json::from_str(&historic).unwrap();
+    for field in ["summary", "summarySource", "actions", "recordings"] {
+        assert_eq!(retained[field], old[field], "Changed historic {field}");
+    }
+    let export: Value = serde_json::from_str(&serde_json::to_string(&saved).unwrap()).unwrap();
+    assert_eq!(export["summary"], saved["summary"]);
+    assert_eq!(export["actions"], json!([]));
+    assert_eq!(
+        db.pragma_query_value(None, "user_version", |row| row.get::<_, i64>(0))
+            .unwrap(),
+        1
+    );
+}

@@ -1,4 +1,4 @@
-# Local models and templates
+# Local models
 
 Transcription and summaries use separate models. Download a transcription model in Patter; run a local model server for summaries.
 
@@ -36,12 +36,17 @@ Start a local OpenAI-compatible server with a model loaded, then open **Settings
 
 Enter the address under **Local server**, choose **Find models**, select or enter a model name, then **Save changes**. Use the port your server actually runs on and include `/v1`. Patter accepts loopback addresses such as `localhost`, `127.0.0.1` and `::1`; remote model servers are rejected and there is no cloud fallback.
 
-Open a conversation's **Summary** tab and choose **Create summary**. If no models are found, check that the server is running and has a model loaded. If generation fails, check the saved address, model name and the server's status.
+Open a conversation's **Overview** tab and choose **Create summary**. If no models are found, check that the server is running and has a model loaded. If generation fails, check the saved address, model name and the server's status.
 
-## Choose a summary template
+## Summary and action items
 
-Under **Settings → Models → Templates → Default**, choose **General meeting**, **One-to-one**, **Interview**, **Brainstorm**, or **Custom**. Expand **Edit instructions** to change the selected template's guidance; **Reset instructions** restores its built-in guidance. Save your changes.
+Every new summary uses the same format:
 
-Inside a conversation's Summary tab, expand **Template** to choose an override or add **Extra instructions**. Leaving the template on Default follows your saved global choice. Each set of instructions is limited to 4,000 characters and applies to the next generated summary.
+- **Summary** has meaningful subsections for the items actually discussed. Decisions, alternatives and unresolved questions appear within the relevant topic.
+- **Action items** lists concrete actions supported by the conversation. Owners and deadlines appear only when stated; an empty list displays **No action items were agreed.** Suggestions and observations must not become invented commitments.
 
-Regenerating a summary keeps the previous version in history. Generated versions record the model, template and instructions used. Review generated summaries and action items for accuracy before acting on them.
+There are no template selectors or custom-instruction editors. Old global templates, custom instructions and per-conversation overrides remain in saved settings and records for compatibility, but no longer influence generation. Opening an existing conversation does not convert or regenerate its summary. Legacy decisions and completed actions remain readable.
+
+Regenerating replaces generated content in the current version and keeps the previous summary, decisions, actions and their completion state in history. New versions record the canonical instructions, format version, model and original source revision. Notes, transcript and audio remain intact. No database migration is needed. JSON exports and Drive backups retain both old and new versions; new topic boundaries are portable `###` headings in the saved summary string. Older Patter builds can read that string as plain text.
+
+Review generated summaries and actions for accuracy. The prompt requires faithful output, but schema validation cannot independently verify a model's factual claims.

@@ -750,9 +750,7 @@ h3 {
 }
 .settings-section input,
 .settings-section select,
-.settings-section textarea,
-.summary-options select,
-.summary-options textarea {
+.settings-section textarea {
   border: 1px solid #d9d0c2;
   background: #fffcf6;
   border-radius: 8px;
@@ -761,49 +759,9 @@ h3 {
   font-size: 14px;
   font-weight: 400;
 }
-.settings-section textarea,
-.summary-options textarea {
+.settings-section textarea {
   resize: vertical;
   line-height: 1.6;
-}
-.summary-options {
-  padding-top: 18px;
-}
-.summary-options[open] {
-  border-bottom: 1px solid var(--line);
-  padding-bottom: 16px;
-}
-.summary-options summary {
-  cursor: pointer;
-  font-size: 13px;
-  color: var(--muted);
-}
-.summary-options summary span {
-  color: var(--teal);
-  font-weight: 700;
-  margin-left: 8px;
-}
-.summary-options fieldset {
-  margin: 16px 0 0;
-  padding: 0;
-  border: 0;
-  min-width: 0;
-}
-.summary-options label {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-bottom: 12px;
-  font-size: 12px;
-  font-weight: 700;
-}
-.summary-options p,
-.summary-options small {
-  display: block;
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.6;
-  margin-bottom: 12px;
 }
 .settings-section small {
   display: block;
@@ -1698,3 +1656,15 @@ h3 {
 
 .upcoming-actions { display: flex; align-items: center; gap: 8px; margin-left: 39px; }
 .upcoming-actions .join-meeting { margin: 0; }
+
+.summary-topic + .summary-topic {
+  margin-top: 24px;
+}
+.summary-topic h3 {
+  margin: 0 0 8px;
+  font-size: 17px;
+  line-height: 1.4;
+}
+.summary-topic .summary-text {
+  white-space: pre-wrap;
+}

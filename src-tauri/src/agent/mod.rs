@@ -307,12 +307,8 @@ fn library_call(lib: &Library, access: &Access, tool: &str, args: Value) -> Resu
         }
         "list_templates" => {
             let _: Empty = parse(args)?;
-            let builtins: Vec<Value> =
-                serde_json::from_str(include_str!("../../../src/lib/summary-templates.json"))
-                    .map_err(io)?;
-            Ok(
-                json!({"templates":builtins.iter().map(|t|json!({"id":t["id"],"name":t["name"]})).collect::<Vec<_>>()}),
-            )
+            let format = crate::summary_format::canonical();
+            Ok(json!({"templates":[{"id":format.id,"name":format.name}]}))
         }
         _ => Err("Unknown tool".into()),
     }

@@ -154,7 +154,7 @@ try {
       assert(!summary.error);
       assert.match(summary.value.content, /QA/);
       console.log(
-        "PASS: local summary job completed and saved with the requested template.",
+        "PASS: local summary job completed using the unified format; legacy template argument accepted.",
       );
     } else throw new Error("Unknown mode");
   }

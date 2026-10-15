@@ -1,5 +1,5 @@
 //! Shared UI/agent processing. Results may only commit against their source revision.
-use crate::{models, store, templates, transcription};
+use crate::{models, store, transcription};
 use serde_json::{json, Value};
 use std::path::PathBuf;
 use store::{Library, Result};
@@ -15,16 +15,12 @@ pub fn prepare(lib: &Library, id: &str, kind: &str, template: Option<&str>) -> R
         return Err("Choose summary or transcript.".into());
     }
     let db = lib.db.lock().map_err(|_| "Library lock failed")?;
-    let mut meeting = store::load(&db, id)?;
+    let meeting = store::load(&db, id)?;
     let preferences = store::preferences(&db)?;
-    if let Some(template) = template {
-        if kind != "summary" {
-            return Err("Templates apply to summaries only.".into());
-        }
-        meeting["summaryTemplate"] = json!(template);
-    }
-    if kind == "summary" {
-        templates::resolve(&meeting, &preferences)?;
+    // Older agent clients may still send a template. Accept it for summary jobs
+    // without changing the saved selector or applying legacy custom instructions.
+    if template.is_some() && kind != "summary" {
+        return Err("Templates apply to summaries only.".into());
     }
     Ok(Processing {
         meeting,

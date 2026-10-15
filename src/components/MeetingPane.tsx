@@ -12,13 +12,12 @@ import {
 } from "@phosphor-icons/react";
 import { JoinMeeting } from "./JoinMeeting";
 import { AudioPlayer } from "./AudioPlayer";
-import { SummaryOptions } from "./SummaryOptions";
-import type { Meeting, Preferences } from "../lib/types";
+import { SummaryText } from "./SummaryText";
+import type { Meeting } from "../lib/types";
 import { formatTime } from "../lib/types";
 import { summaryFreshness } from "../lib/summary-input";
 export function MeetingPane({
   meeting,
-  preferences,
   onUpdate,
   onArchive,
   onImport,
@@ -36,7 +35,6 @@ export function MeetingPane({
   joinUrl,
 }: {
   meeting: Meeting;
-  preferences: Preferences;
   onUpdate: (m: Meeting) => void;
   onArchive: () => void;
   onImport: () => void;
@@ -229,14 +227,6 @@ export function MeetingPane({
         aria-labelledby={`tab-${tab}`}
         tabIndex={0}
       >
-        {tab === "overview" && (
-          <SummaryOptions
-            meeting={meeting}
-            preferences={preferences}
-            onUpdate={onUpdate}
-            busy={!!busy}
-          />
-        )}
         {tab === "overview" && freshness && freshness !== "current" && (
           <div className="info-box" role="status">
             <p>
@@ -268,7 +258,7 @@ export function MeetingPane({
             <>
               <section>
                 <h2>Summary</h2>
-                <p className="summary-text">{meeting.summary}</p>
+                <SummaryText meeting={meeting} />
               </section>
               {meeting.decisions.length > 0 && (
                 <section>
@@ -280,9 +270,13 @@ export function MeetingPane({
                   </ul>
                 </section>
               )}
-              {meeting.actions.length > 0 && (
+              {(meeting.actions.length > 0 ||
+                meeting.summarySource?.summaryFormatVersion === 1) && (
                 <section className="next-steps">
-                  <h2>Next steps</h2>
+                  <h2>Action items</h2>
+                  {meeting.actions.length === 0 && (
+                    <p className="summary-text">No action items were agreed.</p>
+                  )}
                   {meeting.actions.map((action) => (
                     <label
                       key={action.id}

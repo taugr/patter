@@ -81,7 +81,7 @@ impl Server {
     }
 }
 fn final_text() -> &'static str {
-    r#"{"summary":"Synthetic new summary","decisions":[],"actions":[]}"#
+    r#"{"summary":[{"topic":"Synthetic topic","text":"Synthetic new summary"}],"actions":[]}"#
 }
 fn completion(text: &str, reason: Option<Value>) -> Value {
     let mut value = json!({"choices":[{"message":{"content":text}}]});
@@ -238,7 +238,11 @@ async fn stop_missing_null_and_unknown_reasons_remain_compatible_at_every_stage(
             let (lib, id, previous) = fixture(&server.endpoint, long);
             let saved = run(&lib, &id).await.unwrap();
             assert_eq!(server.finish().len(), if long { 5 } else { 1 });
-            assert_eq!(saved["summary"], "Synthetic new summary");
+            assert_eq!(
+                saved["summary"],
+                "### Synthetic topic\nSynthetic new summary"
+            );
+            assert_eq!(saved["summarySource"]["summaryFormatVersion"], 1);
             assert_eq!(saved["recordingProcessing"]["status"], "complete");
             assert!(saved["recordingProcessing"]["error"].is_null());
             let raw: String = lib
@@ -258,4 +262,59 @@ async fn stop_missing_null_and_unknown_reasons_remain_compatible_at_every_stage(
             std::fs::remove_dir_all(&lib.root).unwrap();
         }
     }
+}
+
+#[tokio::test]
+async fn invalid_unified_output_keeps_previous_summary_actions_and_history() {
+    for output in [
+        r#"{"summary":[],"actions":[]}"#,
+        r#"{"summary":[{"topic":"Topic","text":""}],"actions":[]}"#,
+        r#"{"summary":"Unexpected legacy output","decisions":[],"actions":[]}"#,
+    ] {
+        let server = Server::start(vec![completion(output, Some(json!("stop")))]);
+        let (lib, id, previous) = fixture(&server.endpoint, false);
+        assert!(run(&lib, &id).await.is_err());
+        assert_eq!(server.finish().len(), 1);
+        preserves_previous(&lib, &id, &previous);
+        std::fs::remove_dir_all(&lib.root).unwrap();
+    }
+}
+
+#[tokio::test]
+async fn manual_regeneration_uses_unified_format_with_legacy_settings_and_supported_actions() {
+    let server = Server::start(vec![completion(
+        r#"{"summary":[{"topic":"Review notes","text":"Rae agreed to send the notes by Friday."}],"actions":["Rae: send the notes by Friday"]}"#,
+        Some(json!("stop")),
+    )]);
+    let (lib, id, previous) = fixture(&server.endpoint, false);
+    let prefs = json!({"endpoint":server.endpoint,"model":"synthetic-fixture","summaryTemplate":"custom","templateInstructions":{"custom":"Legacy instruction that must not be sent"}});
+    lib.db
+        .lock()
+        .unwrap()
+        .execute("UPDATE preferences SET data=?", [prefs.to_string()])
+        .unwrap();
+    let mut current = previous.clone();
+    current["notes"] = json!("Rae agreed to send the notes by Friday.");
+    current["summaryTemplate"] = json!("unknown-old-template");
+    current["summaryInstructions"] = json!("Legacy meeting instruction that must not be sent");
+    let current = store::save_checked(&mut lib.db.lock().unwrap(), current).unwrap();
+    let job = crate::services::prepare(&lib, &id, "summary", Some("interview")).unwrap();
+    let generated = summarize(&job.meeting, &job.preferences).await.unwrap();
+    let saved = crate::services::finish(&lib, &job, generated, None).unwrap();
+    let requests = server.finish();
+    assert_eq!(requests.len(), 1);
+    let request = requests[0].to_string();
+    assert!(!request.contains("must not be sent"));
+    assert!(request.contains("owner or deadline only when explicitly supported"));
+    assert_eq!(saved["actions"][0]["text"], "Rae: send the notes by Friday");
+    assert_eq!(
+        saved["summary"],
+        "### Review notes\nRae agreed to send the notes by Friday."
+    );
+    assert_eq!(saved["summaryFreshness"], "current");
+    assert_eq!(saved["summaryTemplate"], current["summaryTemplate"]);
+    assert_eq!(saved["summaryInstructions"], current["summaryInstructions"]);
+    assert_eq!(saved["notes"], current["notes"]);
+    assert_eq!(saved["recordings"], previous["recordings"]);
+    std::fs::remove_dir_all(&lib.root).unwrap();
 }

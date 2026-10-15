@@ -35,7 +35,7 @@ Patter is in active personal development. **v0.6.2** adds focused Settings tabs 
 
 Download the [latest Mac installer](https://github.com/taugr/patter/releases/latest). Drag Patter into Applications. Later, use Settings → General → Updates → Install and restart. Read [installation, release and recovery instructions](INSTALL.md), including the ad-hoc signing caveat. No Apple Developer membership or notarization is used.
 
-Recording now targets the selected conversation, with **Record here** and **Record…** actions for Upcoming meetings. After Stop finalizes new audio, Patter transcribes it and generates a summary using the existing local model/template settings. Saved processing stages support retry after interruption without repeating a completed transcription. Empty/failed captures and very short transcripts skip automatic summaries. Calendar refresh runs on return to the app and via Upcoming → Refresh; all meetings are reachable through Show all.
+Recording now targets the selected conversation, with **Record here** and **Record…** actions for Upcoming meetings. After Stop finalizes new audio, Patter transcribes it and generates a summary using the selected local models and unified summary format. Saved processing stages support retry after interruption without repeating a completed transcription. Empty/failed captures and very short transcripts skip automatic summaries. Calendar refresh runs on return to the app and via Upcoming → Refresh; all meetings are reachable through Show all.
 
 ## Run
 
@@ -56,7 +56,7 @@ Application: `src-tauri/target/release/bundle/macos/Patter.app`. Model weights a
 
 - Cream, ink and teal split-view notebook with Fraunces headings, Nunito Sans body text, the vector Patter mark and Phosphor icons.
 - Editable conversation titles/notes, summaries, decisions, action checkboxes, transcripts, search, Today filter and archive/restore.
-- General meeting, One-to-one, Interview, Brainstorm and Custom summary templates, with editable instructions, a default preference and per-conversation choices.
+- One summary format: meaningful subsections for the topics discussed, followed by concrete Action items. Owners and deadlines appear only when supported by the source.
 - Immutable SQLite versions; restoring creates a new version. Existing audio attachments cannot be detached or repointed by ordinary saves. No delete/retention-cleanup commands.
 - Audio import with a durable copy, playback, timestamp seeking, speed control, and consecutive chunk playback within the selected track.
 - Swift Core Audio audio-only taps plus AVAudioEngine microphone capture; approximately five-second CAF chunks, unique capture-session filenames, startup recovery of surviving chunks, and WAV playback derivatives. No screen video is stored.
@@ -74,7 +74,7 @@ Application: `src-tauri/target/release/bundle/macos/Patter.app`. Model weights a
 
 **Summaries:** Start a model in LM Studio's local server, then use `http://127.0.0.1:1234/v1`. For an existing Ollama server use `http://127.0.0.1:11434/v1`. Choose Find models, enter/select a model, and Save. The endpoint/model are preferences, not credentials. No cloud fallback is implemented.
 
-**Templates:** In Settings → Models → Templates, choose a default and edit its instructions. Each template retains its own edits; Reset restores its built-in instructions. In a conversation's Overview, expand Template to override the default or add extra instructions. Changes apply on the next generation, using the same summary, decisions and next steps layout. Long-transcript processing also uses the selected instructions. Generated versions retain the exact instructions, template name, model and generation time; changing a template does not rewrite past summaries. Existing libraries default to General meeting without a database migration.
+**Summary format:** Every new summary groups the actual discussion into meaningful topic subsections under **Summary**, followed by **Action items**. Decisions and unresolved questions belong within their topics. Only supported actions are listed; owners and deadlines are included only when stated. There is no template selector or custom-instruction editor. Older summaries, decisions, completed actions and custom settings remain saved without conversion; old custom instructions are ignored for new generation. Regeneration keeps the previous version in history. New versions retain the canonical instructions, format version, model and generation time. No database migration is required.
 
 **Transcription:** In Settings → Models → Transcription, select Parakeet v3 (632 MB), Whisper Base (148 MB), or Whisper Small (488 MB), choose Download, then Save. Downloads come from Hugging Face; each file is verified before the model is marked ready. Cancellation/interruption keeps partial files for retry, and Verify / repair checks installed files. Once installed, transcription stays offline. Parakeet v3 supports English and 24 other European languages; Whisper supports broader language coverage. The manual Whisper file option accepts compatible whisper.cpp GGML `.bin` files, and older configured paths are preserved. Import or record audio, open Transcript, and choose Transcribe recording. Audio track labels (Microphone / Computer audio) are not speaker diarization. Captured chunks are still transcribed individually; improving long-call context remains future work.
 
@@ -96,7 +96,7 @@ For manual library restore, quit Patter and preserve the current library separat
 ## Verified here
 
 - Production TypeScript/Vite build and Tauri `.app` packaging.
-- Frontend storage/search/template tests and Rust storage/model/template/update-safety tests, including a mock local-model server that checks template guidance through long-transcript processing. Backup fixtures cover snapshot/restore integrity, scheduling and upload behavior; see [validation coverage and remaining checks](docs/google-drive-backup.md#validation-completed-and-still-needed). These checks do not verify real model output quality or Google authorization.
+- Frontend storage/search/rendering tests and Rust storage/model/summary-format/update-safety tests, including a mock local-model server that checks the unified instructions through long-transcript processing. Backup fixtures cover snapshot/restore integrity, scheduling and upload behavior; see [validation coverage and remaining checks](docs/google-drive-backup.md#validation-completed-and-still-needed). These checks do not verify real model output quality or Google authorization.
 - Browser flows: note editing, retained versions, restore, archive/restore, text search, action checkbox persistence, tabs, sample audio play/seek, desktop and compact layouts. No browser console errors in the final inspection.
 - Native app launch, creating/editing a note, Cmd-Q and reopening with notes intact, importing synthetic WAV audio, and native playback.
 - Real Parakeet v3 and Whisper Base downloads and inference on the synthetic 15-second sample, preserving audio bytes and track offsets. Packaged Mac app: Parakeet download, saved selection, successful transcription, and cancellation/retry of Whisper Small. Long meetings and additional hardware still need validation.
@@ -158,7 +158,7 @@ For custom paths and development sockets, use the command and complete arguments
 | `get_conversation` | Read notes, summaries or timestamped transcripts, including older versions. |
 | `conversation_history` | List saved versions and agent attribution. |
 | `edit_conversation` | Update a title or notes, or check/uncheck an existing action. Requires edit permission. |
-| `list_templates` | List summary templates. |
+| `list_templates` | Legacy tool name: lists the single unified summary format. |
 | `start_processing` | Transcribe saved audio or generate a summary using local models. Requires processing permission. |
 | `job_status` | Check a processing job’s progress or result. |
 | `open_conversation` | Show a conversation in Patter. |

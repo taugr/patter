@@ -178,12 +178,12 @@ fn tools() -> Vec<Tool> {
     add("edit_conversation","Update only the supplied title, notes, or action completion. Notes replace the full notes text. Requires editing permission and expected_revision from a fresh read; retains history/audio.",json!({"id":string,"expected_revision":integer,"title":{"type":"string","maxLength":300},"notes":{"type":"string","maxLength":48000},"action_id":string,"action_done":{"type":"boolean"}}),vec!["id","expected_revision"],false);
     add(
         "list_templates",
-        "List available summary template IDs and names.",
+        "List the single unified summary format (legacy tool name).",
         json!({}),
         vec![],
         true,
     );
-    add("start_processing","Start local summary generation or transcription of existing audio. Requires processing permission and expected_revision. Optional template ID for summary. Returns jobId; never starts recording.",json!({"id":string,"expected_revision":integer,"kind":{"enum":["summary","transcript"]},"template":string}),vec!["id","expected_revision","kind"],false);
+    add("start_processing","Start local summary generation or transcription of existing audio. Requires processing permission and expected_revision. The legacy template argument is accepted for summaries but ignored; all new summaries use Summary topic subsections and Action items. Returns jobId; never starts recording.",json!({"id":string,"expected_revision":integer,"kind":{"enum":["summary","transcript"]},"template":string}),vec!["id","expected_revision","kind"],false);
     add("job_status","Read an agent processing job's stage, completion revision or failure. IDs last for this app session.",json!({"id":string}),vec!["id"],true);
     add(
         "open_conversation",

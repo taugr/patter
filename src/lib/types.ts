@@ -23,9 +23,11 @@ export interface Meeting {
   duration: number;
   notes: string;
   summary: string;
+  // Legacy configuration is retained for old records and backups, but ignored for generation.
   summaryTemplate?: string;
   summaryInstructions?: string;
   summarySource?: {
+    summaryFormatVersion?: number;
     templateId: string;
     templateName: string;
     instructions: string;
@@ -78,8 +80,9 @@ export interface Preferences {
   reminderSound: boolean;
   reminderShowTitle: boolean;
   reminderCalendars: string[];
-  summaryTemplate: string;
-  templateInstructions: Record<string, string>;
+  // Retained legacy preferences, never used by the unified summarizer.
+  summaryTemplate?: string;
+  templateInstructions?: Record<string, string>;
 }
 export const defaultPreferences: Preferences = {
   endpoint: "http://127.0.0.1:1234/v1",
@@ -92,8 +95,6 @@ export const defaultPreferences: Preferences = {
   reminderSound: true,
   reminderShowTitle: true,
   reminderCalendars: [],
-  summaryTemplate: "general",
-  templateInstructions: {},
 };
 export function newMeeting(title = "Untitled conversation"): Meeting {
   return {

@@ -20,7 +20,7 @@ Open **Settings → Models → Transcription**, choose and download a model, the
 
 ## 4. Add a summary or calendar
 
-To generate summaries, [connect a local model server and choose a template](models.md#connect-a-summary-model). To see upcoming meetings, [connect a calendar already present in macOS Calendar](calendar.md). You can then configure reminders or join Google Meet and Zoom calls from Patter.
+To generate summaries, [connect a local model server](models.md#connect-a-summary-model). To see upcoming meetings, [connect a calendar already present in macOS Calendar](calendar.md). You can then configure reminders or join Google Meet and Zoom calls from Patter.
 
 ## 5. Protect the library
 

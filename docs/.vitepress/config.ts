@@ -42,7 +42,7 @@ export default defineConfig({
         items: [
           { text: 'Permissions', link: '/guide/permissions' },
           { text: 'Calendar and meetings', link: '/guide/calendar' },
-          { text: 'Local models and templates', link: '/guide/models' },
+          { text: 'Local models', link: '/guide/models' },
         ],
       },
       {

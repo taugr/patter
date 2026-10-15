@@ -134,8 +134,8 @@ Turning access off rejects subsequent requests. Revoking or changing permissions
 - `get_conversation`: overview, notes, summary or timestamped transcript; optional historic revision. Text pagination counts Unicode characters; transcript pagination counts segments.
 - `conversation_history`: revision numbers, save times and agent attribution.
 - `edit_conversation`: replace notes/title or toggle an existing action item. Requires the revision read by the client. It cannot detach recordings or delete history.
-- `list_templates`: template names and IDs.
-- `start_processing`: transcribe existing audio or generate a summary with an optional template. Requires processing permission and a current revision; only one agent processing job runs at once. Finish recording first.
+- `list_templates`: legacy tool name; returns the single unified summary format (`unified`).
+- `start_processing`: transcribe existing audio or generate a summary in the unified format. The legacy optional `template` argument is accepted but ignored for summary jobs; it does not change stored template settings. Requires processing permission and a current revision; only one agent processing job runs at once. Finish recording first.
 - `job_status`: running/completed/failed stage and resulting revision/error. Recent jobs are retained for the current app session, up to 100 entries.
 - `open_conversation`: request navigation to the conversation in Patter. Unsaved local edits must be resolved before navigation.
 - `patter_status`: app version, recording state and sanitized backup progress.

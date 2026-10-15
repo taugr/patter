@@ -293,3 +293,18 @@ fn host_lock_protects_live_socket_and_restarts_after_exit() {
     drop(lock);
     assert!(transport::bind_socket(&socket).is_ok());
 }
+
+#[test]
+fn legacy_template_discovery_returns_only_the_unified_format() {
+    let (lib, access, _) = fixture();
+    access
+        .configure(Config {
+            enabled: true,
+            ..Default::default()
+        })
+        .unwrap();
+    assert_eq!(
+        library_call(&lib, &access, "list_templates", json!({})).unwrap(),
+        json!({"templates":[{"id":"unified","name":"Summary and action items"}]})
+    );
+}
