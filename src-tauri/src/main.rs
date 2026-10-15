@@ -422,12 +422,17 @@ fn collect_audio(lib: &Library, id: &str, duration: Option<f64>) -> Result<Value
 }
 #[tauri::command]
 async fn stop_recording(lib: State<'_, Library>, runtime: State<'_, Runtime>) -> Result<Value> {
-    let mut capture = runtime
+    let capture = runtime
         .capture
         .lock()
         .map_err(|_| "Capture lock failed")?
         .take()
         .ok_or("No active recording")?;
+    finish_capture(&lib, capture).await
+}
+// Shared with the opt-in file-fed smoke test. The test substitutes only the
+// audio source; stop synchronization, collection and queueing remain unchanged.
+async fn finish_capture(lib: &Library, mut capture: Capture) -> Result<Value> {
     let duration = capture.offset + capture.started.elapsed().as_secs_f64();
     if let Some(mut stdin) = capture.child.stdin.take() {
         let _ = stdin.write_all(b"stop\n");
@@ -468,12 +473,12 @@ async fn stop_recording(lib: State<'_, Library>, runtime: State<'_, Runtime>) ->
     })
     .await
     .map_err(|e| e.to_string())?;
-    let result = collect_audio(&lib, &id, Some(duration)).and_then(|meeting| {
+    let result = collect_audio(lib, &id, Some(duration)).and_then(|meeting| {
         let successful = capture_errors
             .lock()
             .map_err(|_| "Capture status lock failed")?
             .is_none();
-        recording_processing::queue(&lib, meeting, &previous_audio, successful)
+        recording_processing::queue(lib, meeting, &previous_audio, successful)
     });
     drop(capture_activity);
     result
@@ -842,3 +847,7 @@ mod recording_tests {
         std::fs::remove_dir_all(root).unwrap();
     }
 }
+
+#[cfg(test)]
+#[path = "recording_smoke_tests.rs"]
+mod recording_smoke_tests;
