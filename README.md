@@ -29,7 +29,7 @@
 
 A personal, local-first meeting notebook for Apple Silicon Macs running macOS 15 or later. Built with Tauri 2, Rust, SQLite, Swift audio/calendar and Parakeet helpers, and React + Vite. No hosted backend, account system, analytics, Electron runtime, or bundled model weights.
 
-Patter is in active personal development. **v0.6.2** adds focused Settings tabs and fixes the missing Calendar entitlement. Calendar consent has been confirmed in a packaged local test build. Native audio capture and summary-model inference still need a supervised setup and reliability pass before relying on Patter for important meetings.
+Patter is in active personal development. **v0.7.0** uses one meeting-summary format: topic subsections under **Summary**, followed by **Action items**. Short synthetic local-model checks and an isolated file-fed recording-to-summary test have passed. Live device startup, permission continuity and long-session reliability still need supervised validation.
 
 ## Install and updates
 
@@ -97,11 +97,12 @@ For manual library restore, quit Patter and preserve the current library separat
 
 - Production TypeScript/Vite build and Tauri `.app` packaging.
 - Frontend storage/search/rendering tests and Rust storage/model/summary-format/update-safety tests, including a mock local-model server that checks the unified instructions through long-transcript processing. Backup fixtures cover snapshot/restore integrity, scheduling and upload behavior; see [validation coverage and remaining checks](docs/google-drive-backup.md#validation-completed-and-still-needed). These checks do not verify real model output quality or Google authorization.
+- Unified-summary checks on an already-installed Gemma 12B QAT model: discussion-only and declined-suggestion cases produced no actions; explicit commitments retained only supported owners/deadlines. An isolated 23-second synthetic speech file passed production chunk writing, Stop/finalization, installed Parakeet transcription, local summary generation and SQLite save/reopen. Audio bytes and earlier versions were retained; failed/empty captures did not queue new processing. See [the opt-in test instructions](test-fixtures/README.md). File input replaced device capture, and the native UI was not driven.
 - Browser flows: note editing, retained versions, restore, archive/restore, text search, action checkbox persistence, tabs, sample audio play/seek, desktop and compact layouts. No browser console errors in the final inspection.
 - Native app launch, creating/editing a note, Cmd-Q and reopening with notes intact, importing synthetic WAV audio, and native playback.
 - Real Parakeet v3 and Whisper Base downloads and inference on the synthetic 15-second sample, preserving audio bytes and track offsets. Packaged Mac app: Parakeet download, saved selection, successful transcription, and cancellation/retry of Whisper Small. Long meetings and additional hardware still need validation.
 
-Not yet verified: live capture, Google/EventKit permission flow, live-meeting transcription quality or LLM output, full backup/restore round trip, long-session recovery/performance. No real microphone/system capture or personal calendar reading was performed.
+Not yet verified by these checks: live microphone/system-audio capture, permission continuity after an update, real-meeting transcription/summary quality, and long-session recovery/performance. The synthetic tests did not read a personal calendar or capture unrelated live sound.
 
 ## Attribution and licensing
 
