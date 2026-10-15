@@ -200,7 +200,7 @@ async fn incomplete_map_and_reduce_responses_stop_before_any_later_request() {
             assert!(!requests.last().unwrap()["messages"][0]["content"]
                 .as_str()
                 .unwrap()
-                .contains("Return only a JSON object"));
+                .contains("Return exactly one JSON data object"));
             if target >= 2 {
                 assert!(requests[target]["messages"][0]["content"]
                     .as_str()

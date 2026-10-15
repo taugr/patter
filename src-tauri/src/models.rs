@@ -184,7 +184,7 @@ mod tests {
         assert!(requests[2]["messages"][0]["content"]
             .as_str()
             .unwrap()
-            .contains("JSON object"));
+            .contains("JSON data object"));
         assert_eq!(
             generated["summary"],
             "### Interface access\nInclusive interface ideas."

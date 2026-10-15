@@ -21,7 +21,7 @@ impl Format {
         format!("{}\n\n{}", self.instructions, task)
     }
     pub fn final_prompt(&self) -> String {
-        self.prompt(&format!("Return only a JSON object matching this schema: {}. No markdown fences. The summary array supplies the topic subsections of Summary; actions supplies the separate Action items section.", self.output_schema))
+        self.prompt(&format!("Return exactly one JSON data object with only the top-level keys summary and actions. The summary value is an array of topic/text objects for the topic subsections of Summary; actions is an array of concrete action strings for the separate Action items section. List every supported commitment and agreed or accepted follow-up in actions, even if it also appears in summary. Do not leave actions empty when the source contains supported actions. Write summary first and actions second. Give every distinct discussion item its own summary entry with a specific topic heading. For actions, an owner and deadline are optional: include an agreed action even when either or both are absent. Return the meeting data, never the schema itself. Do not echo or explain the schema. Do not include a second JSON object, commentary or markdown fences. Your single data object must conform to this JSON Schema:\n{}", self.output_schema))
     }
     pub fn source(&self) -> Value {
         // Retain the established provenance keys for old readers and exported records.
@@ -85,7 +85,11 @@ mod tests {
         let format = canonical();
         assert_eq!(format.id, "unified");
         assert_eq!(format.version, 1);
-        assert!(format.final_prompt().contains("JSON object"));
+        assert!(format.final_prompt().contains("JSON data object"));
+        assert!(format.final_prompt().contains("never the schema itself"));
+        assert!(format
+            .final_prompt()
+            .contains("Do not include a second JSON object"));
         assert!(format
             .instructions
             .contains("owner or deadline only when explicitly supported"));
@@ -99,6 +103,15 @@ mod tests {
         assert_eq!(parsed["decisions"], json!([]));
         assert_eq!(parsed["actions"], json!([]));
         assert!(parse(r#"{"summary":[{"topic":"C# migration","text":"The migration is still being evaluated."}],"actions":[]}"#).is_ok());
+    }
+    #[test]
+    fn echoed_schema_before_data_is_rejected_instead_of_overwriting_saved_content() {
+        let echoed = format!(
+            "{}\n{}",
+            canonical().output_schema,
+            r#"{"summary":[{"topic":"Launch timing","text":"Still undecided."}],"actions":[]}"#
+        );
+        assert!(parse(&echoed).is_err());
     }
     #[test]
     fn malformed_or_partial_output_never_replaces_a_saved_summary() {
